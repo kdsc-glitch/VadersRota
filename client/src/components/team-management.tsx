@@ -5,6 +5,10 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, FlagIcon, Edit, Wand2, CalendarX, FolderSync, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { HolidayManagementModal } from "./holiday-management-modal";
+import { XMattersSyncModal } from "./xmatters-sync-modal";
+import { FairnessReportModal } from "./fairness-report-modal";
 import type { TeamMember } from "@shared/schema";
 
 interface TeamManagementProps {
@@ -14,6 +18,9 @@ interface TeamManagementProps {
 
 export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps) {
   const { toast } = useToast();
+  const [showHolidayModal, setShowHolidayModal] = useState(false);
+  const [showXMattersModal, setShowXMattersModal] = useState(false);
+  const [showFairnessModal, setShowFairnessModal] = useState(false);
 
   const autoAssignMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/rota-assignments/auto-assign"),
@@ -163,7 +170,11 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
             </div>
           </Button>
 
-          <Button variant="outline" className="w-full justify-start h-auto p-3">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start h-auto p-3"
+            onClick={() => setShowHolidayModal(true)}
+          >
             <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
               <CalendarX className="text-amber-600 w-5 h-5" />
             </div>
@@ -173,17 +184,25 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
             </div>
           </Button>
 
-          <Button variant="outline" className="w-full justify-start h-auto p-3">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start h-auto p-3"
+            onClick={() => setShowXMattersModal(true)}
+          >
             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
               <FolderSync className="text-purple-600 w-5 h-5" />
             </div>
             <div className="text-left">
-              <p className="text-sm font-medium">FolderSync DSG Rota</p>
+              <p className="text-sm font-medium">Sync xMatters DSG Rota</p>
               <p className="text-xs text-slate-500">Update main group assignments</p>
             </div>
           </Button>
 
-          <Button variant="outline" className="w-full justify-start h-auto p-3">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start h-auto p-3"
+            onClick={() => setShowFairnessModal(true)}
+          >
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
               <TrendingUp className="text-blue-600 w-5 h-5" />
             </div>
@@ -194,6 +213,22 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
           </Button>
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <HolidayManagementModal 
+        isOpen={showHolidayModal}
+        onClose={() => setShowHolidayModal(false)}
+      />
+      
+      <XMattersSyncModal 
+        isOpen={showXMattersModal}
+        onClose={() => setShowXMattersModal(false)}
+      />
+      
+      <FairnessReportModal 
+        isOpen={showFairnessModal}
+        onClose={() => setShowFairnessModal(false)}
+      />
     </div>
   );
 }
