@@ -1,4 +1,6 @@
 import { teamMembers, rotaAssignments, rotaHistory, type TeamMember, type InsertTeamMember, type RotaAssignment, type InsertRotaAssignment, type RotaHistory, type InsertRotaHistory } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Team Members
@@ -26,6 +28,169 @@ export interface IStorage {
   // Utility methods
   getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]>;
   getMemberAssignmentCount(memberId: number): Promise<number>;
+}
+
+export class DatabaseStorage implements IStorage {
+  async getTeamMembers(): Promise<TeamMember[]> {
+    const members = await db.select().from(teamMembers);
+    return members;
+  }
+
+  async getTeamMemberById(id: number): Promise<TeamMember | undefined> {
+    const [member] = await db.select().from(teamMembers).where(eq(teamMembers.id, id));
+    return member || undefined;
+  }
+
+  async getTeamMembersByRegion(region: string): Promise<TeamMember[]> {
+    const members = await db.select().from(teamMembers).where(eq(teamMembers.region, region));
+    return members;
+  }
+
+  async createTeamMember(member: InsertTeamMember): Promise<TeamMember> {
+    const [newMember] = await db
+      .insert(teamMembers)
+      .values(member)
+      .returning();
+    return newMember;
+  }
+
+  async updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+    const [updatedMember] = await db
+      .update(teamMembers)
+      .set(updates)
+      .where(eq(teamMembers.id, id))
+      .returning();
+    return updatedMember || undefined;
+  }
+
+  async deleteTeamMember(id: number): Promise<boolean> {
+    const result = await db.delete(teamMembers).where(eq(teamMembers.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async getRotaAssignments(): Promise<RotaAssignment[]> {
+    const assignments = await db.select().from(rotaAssignments).orderBy(rotaAssignments.startDate);
+    return assignments;
+  }
+
+  async getRotaAssignmentById(id: number): Promise<RotaAssignment | undefined> {
+    const [assignment] = await db.select().from(rotaAssignments).where(eq(rotaAssignments.id, id));
+    return assignment || undefined;
+  }
+
+  async getCurrentAssignment(): Promise<RotaAssignment | undefined> {
+    const today = new Date().toISOString().split('T')[0];
+    const [assignment] = await db
+      .select()
+      .from(rotaAssignments)
+      .where(eq(rotaAssignments.startDate, today))
+      .limit(1);
+    
+    if (assignment) return assignment;
+    
+    // If no exact match, find assignment that spans today
+    const assignments = await db.select().from(rotaAssignments);
+    return assignments.find(a => a.startDate <= today && a.endDate >= today);
+  }
+
+  async getUpcomingAssignments(): Promise<RotaAssignment[]> {
+    const today = new Date().toISOString().split('T')[0];
+    const assignments = await db.select().from(rotaAssignments);
+    return assignments
+      .filter(assignment => assignment.startDate > today)
+      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  }
+
+  async createRotaAssignment(assignment: InsertRotaAssignment): Promise<RotaAssignment> {
+    const [newAssignment] = await db
+      .insert(rotaAssignments)
+      .values(assignment)
+      .returning();
+    
+    // Create history entries
+    if (assignment.usMemberId) {
+      await this.createRotaHistory({
+        memberId: assignment.usMemberId,
+        assignmentId: newAssignment.id,
+        region: "us",
+        startDate: assignment.startDate,
+        endDate: assignment.endDate
+      });
+    }
+    
+    if (assignment.ukMemberId) {
+      await this.createRotaHistory({
+        memberId: assignment.ukMemberId,
+        assignmentId: newAssignment.id,
+        region: "uk",
+        startDate: assignment.startDate,
+        endDate: assignment.endDate
+      });
+    }
+    
+    return newAssignment;
+  }
+
+  async updateRotaAssignment(id: number, updates: Partial<InsertRotaAssignment>): Promise<RotaAssignment | undefined> {
+    const [updatedAssignment] = await db
+      .update(rotaAssignments)
+      .set(updates)
+      .where(eq(rotaAssignments.id, id))
+      .returning();
+    return updatedAssignment || undefined;
+  }
+
+  async deleteRotaAssignment(id: number): Promise<boolean> {
+    const result = await db.delete(rotaAssignments).where(eq(rotaAssignments.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async getRotaHistory(): Promise<RotaHistory[]> {
+    const history = await db.select().from(rotaHistory);
+    return history;
+  }
+
+  async getRotaHistoryByMember(memberId: number): Promise<RotaHistory[]> {
+    const history = await db.select().from(rotaHistory).where(eq(rotaHistory.memberId, memberId));
+    return history;
+  }
+
+  async createRotaHistory(history: InsertRotaHistory): Promise<RotaHistory> {
+    const [newHistory] = await db
+      .insert(rotaHistory)
+      .values(history)
+      .returning();
+    return newHistory;
+  }
+
+  async getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]> {
+    const regionMembers = await this.getTeamMembersByRegion(region);
+    
+    return regionMembers.filter(member => {
+      // Check if member is available
+      if (!member.isAvailable) return false;
+      
+      // Check if member is on holiday during the period
+      if (member.holidayStart && member.holidayEnd) {
+        const memberHolidayStart = new Date(member.holidayStart);
+        const memberHolidayEnd = new Date(member.holidayEnd);
+        const assignmentStart = new Date(startDate);
+        const assignmentEnd = new Date(endDate);
+        
+        // Check for overlap
+        if (assignmentStart <= memberHolidayEnd && assignmentEnd >= memberHolidayStart) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }
+
+  async getMemberAssignmentCount(memberId: number): Promise<number> {
+    const history = await this.getRotaHistoryByMember(memberId);
+    return history.length;
+  }
 }
 
 export class MemStorage implements IStorage {
@@ -248,4 +413,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
