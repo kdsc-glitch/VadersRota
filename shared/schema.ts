@@ -22,7 +22,7 @@ export const rotaAssignments = pgTable("rota_assignments", {
   ukMemberId: integer("uk_member_id").references(() => teamMembers.id),
   notes: text("notes"),
   isManual: boolean("is_manual").notNull().default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const rotaHistory = pgTable("rota_history", {

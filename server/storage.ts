@@ -50,14 +50,14 @@ export class MemStorage implements IStorage {
 
   private initializeData() {
     // US Team Members
-    const usMembers = [
+    const usMembers: Omit<TeamMember, 'id'>[] = [
       { name: "Sarah Chen", email: "sarah.chen@company.com", region: "us", role: "senior_developer", isAvailable: true, isDsgMember: false, holidayStart: null, holidayEnd: null },
       { name: "Mike Rodriguez", email: "mike.rodriguez@company.com", region: "us", role: "developer", isAvailable: true, isDsgMember: false, holidayStart: null, holidayEnd: null },
       { name: "Alex Kumar", email: "alex.kumar@company.com", region: "us", role: "team_lead", isAvailable: true, isDsgMember: true, holidayStart: null, holidayEnd: null },
     ];
 
     // UK Team Members
-    const ukMembers = [
+    const ukMembers: Omit<TeamMember, 'id'>[] = [
       { name: "James Wilson", email: "james.wilson@company.com", region: "uk", role: "senior_developer", isAvailable: true, isDsgMember: false, holidayStart: null, holidayEnd: null },
       { name: "Emma Knight", email: "emma.knight@company.com", region: "uk", role: "developer", isAvailable: true, isDsgMember: false, holidayStart: null, holidayEnd: null },
       { name: "David Parker", email: "david.parker@company.com", region: "uk", role: "developer", isAvailable: false, isDsgMember: false, holidayStart: "2024-12-10", holidayEnd: "2024-12-20" },
@@ -68,10 +68,16 @@ export class MemStorage implements IStorage {
       this.teamMembers.set(id, { ...member, id });
     });
 
-    // Current assignment
+    // Current assignment - set to current week
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+
     const currentAssignment = {
-      startDate: "2024-12-09",
-      endDate: "2024-12-15",
+      startDate: startOfWeek.toISOString().split('T')[0],
+      endDate: endOfWeek.toISOString().split('T')[0],
       usMemberId: 1, // Sarah Chen
       ukMemberId: 4, // James Wilson
       notes: "Regular weekly rotation",
@@ -97,7 +103,15 @@ export class MemStorage implements IStorage {
 
   async createTeamMember(member: InsertTeamMember): Promise<TeamMember> {
     const id = this.currentTeamMemberId++;
-    const newMember: TeamMember = { ...member, id };
+    const newMember: TeamMember = { 
+      ...member, 
+      id,
+      role: member.role || "developer",
+      isAvailable: member.isAvailable ?? true,
+      isDsgMember: member.isDsgMember ?? false,
+      holidayStart: member.holidayStart || null,
+      holidayEnd: member.holidayEnd || null
+    };
     this.teamMembers.set(id, newMember);
     return newMember;
   }
@@ -144,6 +158,10 @@ export class MemStorage implements IStorage {
     const newAssignment: RotaAssignment = { 
       ...assignment, 
       id,
+      usMemberId: assignment.usMemberId || null,
+      ukMemberId: assignment.ukMemberId || null,
+      notes: assignment.notes || null,
+      isManual: assignment.isManual ?? false,
       createdAt: new Date()
     };
     this.rotaAssignments.set(id, newAssignment);
