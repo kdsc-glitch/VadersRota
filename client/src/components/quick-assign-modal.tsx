@@ -3,6 +3,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -37,6 +38,7 @@ export function QuickAssignModal({
   existingAssignment 
 }: QuickAssignModalProps) {
   const { toast } = useToast();
+  const [loadingStageModal, setLoadingStageModal] = useState<string>("");
   
   const form = useForm<QuickAssignFormData>({
     resolver: zodResolver(quickAssignSchema),
@@ -81,20 +83,40 @@ export function QuickAssignModal({
 
   const autoAssignMutation = useMutation({
     mutationFn: async () => {
+      // Enhanced loading stages for better UX
+      setLoadingStageModal("Analyzing team availability...");
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      setLoadingStageModal("Applying fair rotation algorithm...");
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setLoadingStageModal("Checking holiday conflicts...");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      setLoadingStageModal("Finalizing assignments...");
+      
       return apiRequest("POST", "/api/rota-assignments/auto-assign", {
         startDate: weekStartDate,
         endDate: weekEndDate,
       });
     },
     onSuccess: () => {
+      setLoadingStageModal("Assignment complete!");
+      setTimeout(() => setLoadingStageModal(""), 800);
+      
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      
       toast({
         title: "Auto-Assignment Complete",
         description: "Week has been automatically assigned using fair rotation",
       });
-      onClose();
+      
+      setTimeout(() => onClose(), 1000);
     },
     onError: (error: any) => {
+      setLoadingStageModal("");
       toast({
         title: "Auto-Assignment Failed",
         description: error.message || "Failed to auto-assign week",
@@ -176,6 +198,18 @@ export function QuickAssignModal({
                 )}
               />
               
+              {/* Loading stage indicator */}
+              {autoAssignMutation.isPending && loadingStageModal && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span className="text-sm text-blue-800 animate-pulse">
+                      {loadingStageModal}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex space-x-3 pt-4">
                 <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
                   Cancel
@@ -183,12 +217,24 @@ export function QuickAssignModal({
                 <Button 
                   type="button" 
                   variant="outline" 
-                  className="flex-1"
+                  className={`flex-1 transition-all duration-300 ${
+                    autoAssignMutation.isPending ? 'bg-blue-50 border-blue-200' : ''
+                  }`}
                   onClick={() => autoAssignMutation.mutate()}
                   disabled={autoAssignMutation.isPending}
                 >
-                  <Users className="w-4 h-4 mr-1" />
-                  Auto-Assign
+                  {autoAssignMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      <Sparkles className="w-3 h-3 mr-1 animate-pulse" />
+                      Auto-Assigning...
+                    </>
+                  ) : (
+                    <>
+                      <Users className="w-4 h-4 mr-1" />
+                      Auto-Assign
+                    </>
+                  )}
                 </Button>
                 <Button 
                   type="submit" 
