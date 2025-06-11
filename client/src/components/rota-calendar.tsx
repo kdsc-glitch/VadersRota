@@ -95,6 +95,30 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     return dateStr >= weekAssignment.startDate && dateStr <= weekAssignment.endDate;
   };
 
+  const getDayAssignment = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    // First check for specific day assignment (startDate === endDate)
+    const dayAssignment = allAssignments.find(assignment => 
+      assignment.startDate === dateStr && assignment.endDate === dateStr
+    );
+    if (dayAssignment) return dayAssignment;
+    
+    // Otherwise return the week assignment for this day
+    return weekAssignment;
+  };
+
+  const getDayUSMember = (date: Date) => {
+    const assignment = getDayAssignment(date);
+    if (!assignment) return null;
+    return teamMembers.find(m => m.id === assignment.usMemberId) || null;
+  };
+
+  const getDayUKMember = (date: Date) => {
+    const assignment = getDayAssignment(date);
+    if (!assignment) return null;
+    return teamMembers.find(m => m.id === assignment.ukMemberId) || null;
+  };
+
   const getWeekLabel = () => {
     const startDate = weekDates[0];
     const endDate = weekDates[6];
@@ -166,31 +190,36 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
               <FlagIcon className="text-blue-600 w-4 h-4" />
               <span className="text-sm font-medium text-slate-700">US</span>
             </div>
-            {weekDates.map((date, index) => (
-              <div 
-                key={index} 
-                className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
-                  weekAssignment 
-                    ? "bg-green-50 border-green-200 hover:bg-green-100" 
-                    : "bg-slate-50 border-slate-200 hover:bg-slate-100"
-                }`}
-                onClick={() => handleDayClick(date)}
-              >
-                <div className={`text-xs font-medium ${
-                  weekAssignment ? "text-green-800" : "text-slate-600"
-                }`}>
-                  {weekAssignment && getWeekUSMember() 
-                    ? getNameInitials(getWeekUSMember()!.name)
-                    : "TBD"
-                  }
+            {weekDates.map((date, index) => {
+              const dayUSMember = getDayUSMember(date);
+              const isAssigned = !!dayUSMember;
+              
+              return (
+                <div 
+                  key={index} 
+                  className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
+                    isAssigned 
+                      ? "bg-green-50 border-green-200 hover:bg-green-100" 
+                      : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                  }`}
+                  onClick={() => handleDayClick(date)}
+                >
+                  <div className={`text-xs font-medium ${
+                    isAssigned ? "text-green-800" : "text-slate-600"
+                  }`}>
+                    {dayUSMember 
+                      ? getNameInitials(dayUSMember.name)
+                      : "TBD"
+                    }
+                  </div>
+                  <div className={`text-xs ${
+                    isAssigned ? "text-green-600" : "text-slate-500"
+                  }`}>
+                    {isAssigned ? "Assigned" : "Click to assign"}
+                  </div>
                 </div>
-                <div className={`text-xs ${
-                  weekAssignment ? "text-green-600" : "text-slate-500"
-                }`}>
-                  {weekAssignment ? "Assigned" : "Click to assign"}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* UK Region Row */}
@@ -199,31 +228,36 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
               <FlagIcon className="text-blue-600 w-4 h-4" />
               <span className="text-sm font-medium text-slate-700">UK</span>
             </div>
-            {weekDates.map((date, index) => (
-              <div 
-                key={index} 
-                className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
-                  weekAssignment 
-                    ? "bg-green-50 border-green-200 hover:bg-green-100" 
-                    : "bg-slate-50 border-slate-200 hover:bg-slate-100"
-                }`}
-                onClick={() => handleDayClick(date)}
-              >
-                <div className={`text-xs font-medium ${
-                  weekAssignment ? "text-green-800" : "text-slate-600"
-                }`}>
-                  {weekAssignment && getWeekUKMember() 
-                    ? getNameInitials(getWeekUKMember()!.name)
-                    : "TBD"
-                  }
+            {weekDates.map((date, index) => {
+              const dayUKMember = getDayUKMember(date);
+              const isAssigned = !!dayUKMember;
+              
+              return (
+                <div 
+                  key={index} 
+                  className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
+                    isAssigned 
+                      ? "bg-green-50 border-green-200 hover:bg-green-100" 
+                      : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                  }`}
+                  onClick={() => handleDayClick(date)}
+                >
+                  <div className={`text-xs font-medium ${
+                    isAssigned ? "text-green-800" : "text-slate-600"
+                  }`}>
+                    {dayUKMember 
+                      ? getNameInitials(dayUKMember.name)
+                      : "TBD"
+                    }
+                  </div>
+                  <div className={`text-xs ${
+                    isAssigned ? "text-green-600" : "text-slate-500"
+                  }`}>
+                    {isAssigned ? "Assigned" : "Click to assign"}
+                  </div>
                 </div>
-                <div className={`text-xs ${
-                  weekAssignment ? "text-green-600" : "text-slate-500"
-                }`}>
-                  {weekAssignment ? "Assigned" : "Click to assign"}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* DSG Main Rota Indicator */}

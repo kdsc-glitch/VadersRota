@@ -1,3 +1,4 @@
+import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -45,6 +46,15 @@ export function DayAssignModal({
     },
   });
 
+  // Reset form when selectedDate or existingAssignment changes
+  React.useEffect(() => {
+    form.reset({
+      date: selectedDate,
+      usMemberId: existingAssignment?.usMemberId || 0,
+      ukMemberId: existingAssignment?.ukMemberId || 0,
+    });
+  }, [selectedDate, existingAssignment, form]);
+
   const usMembers = teamMembers.filter(m => m.region === "us" && m.isAvailable);
   const ukMembers = teamMembers.filter(m => m.region === "uk" && m.isAvailable);
 
@@ -67,7 +77,12 @@ export function DayAssignModal({
       }
     },
     onSuccess: () => {
+      // Invalidate all related queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/fairness"] });
+      
       toast({
         title: existingAssignment ? "Day Updated" : "Day Assigned",
         description: `Support assignment for ${new Date(selectedDate).toLocaleDateString()} has been ${existingAssignment ? 'updated' : 'created'}`,
