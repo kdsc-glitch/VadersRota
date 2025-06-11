@@ -36,26 +36,26 @@ export function DayAssignModal({
   selectedDate,
   existingAssignment 
 }: DayAssignModalProps) {
-  console.log('DayAssignModal render - isOpen:', isOpen, 'selectedDate:', selectedDate);
   const { toast } = useToast();
   
   const form = useForm<DayAssignFormData>({
     resolver: zodResolver(dayAssignSchema),
     defaultValues: {
-      date: "",
-      usMemberId: 0,
-      ukMemberId: 0,
+      date: selectedDate || "",
+      usMemberId: existingAssignment?.usMemberId || 0,
+      ukMemberId: existingAssignment?.ukMemberId || 0,
     },
   });
 
-  // Update form values when props change
+  // Reset form when modal opens with new data
   useEffect(() => {
-    if (selectedDate) {
-      form.setValue('date', selectedDate);
+    if (isOpen) {
+      console.log('Modal opened, setting form values:', { selectedDate, existingAssignment });
+      form.setValue('date', selectedDate || "");
       form.setValue('usMemberId', existingAssignment?.usMemberId || 0);
       form.setValue('ukMemberId', existingAssignment?.ukMemberId || 0);
     }
-  }, [selectedDate, existingAssignment, form]);
+  }, [isOpen, selectedDate, existingAssignment]);
 
   const usMembers = teamMembers.filter(m => m.region === "us" && m.isAvailable);
   const ukMembers = teamMembers.filter(m => m.region === "uk" && m.isAvailable);
@@ -129,7 +129,10 @@ export function DayAssignModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      console.log('Dialog onOpenChange:', open);
+      if (!open) onClose();
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -151,7 +154,7 @@ export function DayAssignModal({
                       console.log('US member selected:', value);
                       field.onChange(parseInt(value));
                     }} 
-                    value={field.value > 0 ? field.value.toString() : undefined}
+                    value={field.value > 0 ? field.value.toString() : ""}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -187,7 +190,7 @@ export function DayAssignModal({
                       console.log('UK member selected:', value);
                       field.onChange(parseInt(value));
                     }} 
-                    value={field.value > 0 ? field.value.toString() : undefined}
+                    value={field.value > 0 ? field.value.toString() : ""}
                   >
                     <FormControl>
                       <SelectTrigger>
