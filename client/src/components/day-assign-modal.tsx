@@ -49,13 +49,16 @@ export function DayAssignModal({
 
   // Reset form when modal opens with new data
   useEffect(() => {
-    if (isOpen) {
-      console.log('Modal opened, setting form values:', { selectedDate, existingAssignment });
-      form.setValue('date', selectedDate || "");
-      form.setValue('usMemberId', existingAssignment?.usMemberId || 0);
-      form.setValue('ukMemberId', existingAssignment?.ukMemberId || 0);
+    if (isOpen && selectedDate) {
+      const values = {
+        date: selectedDate,
+        usMemberId: existingAssignment?.usMemberId || 0,
+        ukMemberId: existingAssignment?.ukMemberId || 0,
+      };
+      console.log('Setting form values:', values);
+      form.reset(values);
     }
-  }, [isOpen, selectedDate, existingAssignment]);
+  }, [isOpen, selectedDate, existingAssignment, form]);
 
   const usMembers = teamMembers.filter(m => m.region === "us" && m.isAvailable);
   const ukMembers = teamMembers.filter(m => m.region === "uk" && m.isAvailable);
