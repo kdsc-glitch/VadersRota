@@ -25,12 +25,15 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const [holidayConflicts, setHolidayConflicts] = useState<Map<string, any>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // Generate calendar dates for the current week (with offset)
+  // Generate calendar dates for the current week (Monday to Friday only)
   const today = new Date();
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay() + (currentWeekOffset * 7));
+  // Start from Monday (day 1) instead of Sunday (day 0)
+  const dayOfWeek = today.getDay();
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Handle Sunday case
+  startOfWeek.setDate(today.getDate() + daysToMonday + (currentWeekOffset * 7));
   
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
+  const weekDates = Array.from({ length: 5 }, (_, i) => {
     const date = new Date(startOfWeek);
     date.setDate(startOfWeek.getDate() + i);
     return date;
@@ -90,7 +93,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
 
   // Find assignment that covers this week
   const weekStartStr = startOfWeek.toISOString().split('T')[0];
-  const weekEndStr = weekDates[6].toISOString().split('T')[0];
+  const weekEndStr = weekDates[4].toISOString().split('T')[0];
   
   const weekAssignment = allAssignments.find(assignment => {
     return assignment.startDate <= weekEndStr && assignment.endDate >= weekStartStr;
@@ -323,8 +326,10 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   };
 
   const getWeekLabel = () => {
+    if (weekDates.length === 0) return "Loading...";
+    
     const startDate = weekDates[0];
-    const endDate = weekDates[6];
+    const endDate = weekDates[weekDates.length - 1];
     const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
     const endMonth = endDate.toLocaleDateString('en-US', { month: 'short' });
     
