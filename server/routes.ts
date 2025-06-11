@@ -182,22 +182,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let assignmentEndDate = endDate;
       
       if (!startDate || !endDate) {
+        // Find the next available week without conflicts
         const today = new Date();
-        const nextMonday = new Date(today);
-        nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
-        const nextSunday = new Date(nextMonday);
-        nextSunday.setDate(nextMonday.getDate() + 6);
+        let attemptDate = new Date(today);
+        let weekFound = false;
+        let attempts = 0;
+        
+        while (!weekFound && attempts < 8) { // Check up to 8 weeks ahead
+          const nextMonday = new Date(attemptDate);
+          nextMonday.setDate(attemptDate.getDate() + (8 - attemptDate.getDay()) % 7);
+          const nextSunday = new Date(nextMonday);
+          nextSunday.setDate(nextMonday.getDate() + 6);
 
-        assignmentStartDate = nextMonday.toISOString().split('T')[0];
-        assignmentEndDate = nextSunday.toISOString().split('T')[0];
+          const testStartDate = nextMonday.toISOString().split('T')[0];
+          const testEndDate = nextSunday.toISOString().split('T')[0];
+          
+          // Check if this week has available members
+          const testUSMembers = await storage.getAvailableMembers("us", testStartDate, testEndDate);
+          const testUKMembers = await storage.getAvailableMembers("uk", testStartDate, testEndDate);
+          
+          console.log(`Testing week ${testStartDate} to ${testEndDate}: US=${testUSMembers.length}, UK=${testUKMembers.length}`);
+          
+          if (testUSMembers.length > 0 && testUKMembers.length > 0) {
+            assignmentStartDate = testStartDate;
+            assignmentEndDate = testEndDate;
+            weekFound = true;
+            console.log(`Found available week: ${testStartDate} to ${testEndDate}`);
+          } else {
+            // Try next week
+            attemptDate.setDate(attemptDate.getDate() + 7);
+            attempts++;
+          }
+        }
+        
+        if (!weekFound) {
+          return res.status(400).json({ 
+            message: "No available weeks found in the next 8 weeks. Please check team availability or assign manually." 
+          });
+        }
       }
 
       // Get available members for each region
       const usMembers = await storage.getAvailableMembers("us", assignmentStartDate, assignmentEndDate);
       const ukMembers = await storage.getAvailableMembers("uk", assignmentStartDate, assignmentEndDate);
 
+      console.log(`Auto-assign debug: Checking period ${assignmentStartDate} to ${assignmentEndDate}`);
+      console.log(`Available US members: ${usMembers.length}`, usMembers.map(m => m.name));
+      console.log(`Available UK members: ${ukMembers.length}`, ukMembers.map(m => m.name));
+
       if (usMembers.length === 0 || ukMembers.length === 0) {
-        return res.status(400).json({ message: "Not enough available members for both regions" });
+        return res.status(400).json({ 
+          message: "Not enough available members for both regions",
+          debug: {
+            period: `${assignmentStartDate} to ${assignmentEndDate}`,
+            usAvailable: usMembers.length,
+            ukAvailable: ukMembers.length
+          }
+        });
       }
 
       // Enhanced fair rotation: consider both assignment count and time since last assignment
