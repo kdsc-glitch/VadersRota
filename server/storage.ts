@@ -292,17 +292,21 @@ export class MemStorage implements IStorage {
   private teamMembers: Map<number, TeamMember>;
   private rotaAssignments: Map<number, RotaAssignment>;
   private rotaHistory: Map<number, RotaHistory>;
+  private holidays: Map<number, Holiday>;
   private currentTeamMemberId: number;
   private currentRotaAssignmentId: number;
   private currentRotaHistoryId: number;
+  private currentHolidayId: number;
 
   constructor() {
     this.teamMembers = new Map();
     this.rotaAssignments = new Map();
     this.rotaHistory = new Map();
+    this.holidays = new Map();
     this.currentTeamMemberId = 1;
     this.currentRotaAssignmentId = 1;
     this.currentRotaHistoryId = 1;
+    this.currentHolidayId = 1;
     
     // Initialize with sample data
     this.initializeData();
@@ -546,6 +550,39 @@ export class MemStorage implements IStorage {
       hasConflict: conflictingMembers.length > 0,
       conflictingMembers
     };
+  }
+
+  // Holiday methods for MemStorage
+  async getHolidays(): Promise<Holiday[]> {
+    return Array.from(this.holidays.values());
+  }
+
+  async getHolidaysByMember(memberId: number): Promise<Holiday[]> {
+    return Array.from(this.holidays.values()).filter(h => h.memberId === memberId);
+  }
+
+  async createHoliday(holiday: InsertHoliday): Promise<Holiday> {
+    const id = this.currentHolidayId++;
+    const newHoliday: Holiday = { 
+      ...holiday, 
+      id, 
+      createdAt: new Date() 
+    };
+    this.holidays.set(id, newHoliday);
+    return newHoliday;
+  }
+
+  async updateHoliday(id: number, updates: Partial<InsertHoliday>): Promise<Holiday | undefined> {
+    const existing = this.holidays.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.holidays.set(id, updated);
+    return updated;
+  }
+
+  async deleteHoliday(id: number): Promise<boolean> {
+    return this.holidays.delete(id);
   }
 }
 

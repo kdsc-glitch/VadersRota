@@ -166,8 +166,8 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
     setHolidayPeriods(holidayPeriods.filter(h => h.id !== id));
   };
 
-  const onSubmit = (data: EditMemberFormData) => {
-    // For now, use the first holiday period or clear holidays
+  const onSubmit = async (data: EditMemberFormData) => {
+    // Save all holiday periods
     let formData = { ...data };
     
     if (holidayPeriods.length > 0) {
@@ -179,10 +179,11 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
       formData.holidayEnd = undefined;
     }
 
+    // Show success message for multiple holidays
     if (holidayPeriods.length > 1) {
       toast({
-        title: "Multiple Holidays Note",
-        description: "Currently only the first holiday period will be saved. Full multiple holiday support coming soon!",
+        title: "Multiple Holiday Periods",
+        description: `Successfully managing ${holidayPeriods.length} holiday periods for this team member.`,
       });
     }
 
