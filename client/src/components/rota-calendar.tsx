@@ -36,7 +36,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   });
 
   // Get assignments for this week
-  const { data: allAssignments = [] } = useQuery<RotaAssignment[]>({
+  const { data: allAssignments = [], refetch: refetchAssignments } = useQuery<RotaAssignment[]>({
     queryKey: ["/api/rota-assignments"],
   });
 
@@ -145,17 +145,18 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       
       await Promise.all(deletePromises);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       console.log('Clear week completed successfully');
-      // Force refetch all assignment-related queries
-      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
       
-      // Also refetch immediately to ensure UI updates
-      queryClient.refetchQueries({ queryKey: ["/api/rota-assignments"] });
-      queryClient.refetchQueries({ queryKey: ["/api/rota-assignments/current"] });
-      queryClient.refetchQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      // Clear all cached assignment data immediately
+      queryClient.removeQueries({ queryKey: ["/api/rota-assignments"] });
+      queryClient.removeQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.removeQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      
+      // Force fresh fetch of all assignment data
+      await refetchAssignments();
+      await queryClient.refetchQueries({ queryKey: ["/api/rota-assignments/current"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
     },
     onError: (error) => {
       console.error('Clear week failed:', error);
