@@ -167,27 +167,53 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
   };
 
   const onSubmit = async (data: EditMemberFormData) => {
-    // Save all holiday periods
-    let formData = { ...data };
+    if (!member) return;
     
-    if (holidayPeriods.length > 0) {
-      const firstHoliday = holidayPeriods[0];
-      formData.holidayStart = firstHoliday.startDate.toISOString().split('T')[0];
-      formData.holidayEnd = firstHoliday.endDate.toISOString().split('T')[0];
-    } else {
-      formData.holidayStart = undefined;
-      formData.holidayEnd = undefined;
-    }
+    try {
+      // Update basic member info
+      let formData = { ...data };
+      
+      if (holidayPeriods.length > 0) {
+        const firstHoliday = holidayPeriods[0];
+        formData.holidayStart = firstHoliday.startDate.toISOString().split('T')[0];
+        formData.holidayEnd = firstHoliday.endDate.toISOString().split('T')[0];
+      } else {
+        formData.holidayStart = undefined;
+        formData.holidayEnd = undefined;
+      }
 
-    // Show success message for multiple holidays
-    if (holidayPeriods.length > 1) {
+      // Save member info first
+      await updateMemberMutation.mutateAsync(formData);
+
+      // Delete existing holidays for this member
+      const existingHolidays = await apiRequest("GET", `/api/holidays/member/${member.id}`);
+      for (const holiday of existingHolidays) {
+        await apiRequest("DELETE", `/api/holidays/${holiday.id}`);
+      }
+
+      // Create new holiday periods
+      for (const holidayPeriod of holidayPeriods) {
+        await apiRequest("POST", "/api/holidays", {
+          memberId: member.id,
+          startDate: holidayPeriod.startDate.toISOString().split('T')[0],
+          endDate: holidayPeriod.endDate.toISOString().split('T')[0],
+          description: holidayPeriod.description || null
+        });
+      }
+
       toast({
-        title: "Multiple Holiday Periods",
-        description: `Successfully managing ${holidayPeriods.length} holiday periods for this team member.`,
+        title: "Member Updated",
+        description: `Successfully saved ${holidayPeriods.length} holiday periods for ${member.name}.`,
+      });
+
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update team member and holiday periods",
+        variant: "destructive",
       });
     }
-
-    updateMemberMutation.mutate(formData);
   };
 
   const handleDelete = () => {

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTeamMemberSchema, insertRotaAssignmentSchema } from "@shared/schema";
+import { insertTeamMemberSchema, insertRotaAssignmentSchema, insertHolidaySchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -366,6 +366,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to sync with xMatters" });
+    }
+  });
+
+  // Holiday management endpoints
+  app.get("/api/holidays", async (req, res) => {
+    try {
+      const holidays = await storage.getHolidays();
+      res.json(holidays);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch holidays" });
+    }
+  });
+
+  app.get("/api/holidays/member/:memberId", async (req, res) => {
+    try {
+      const memberId = parseInt(req.params.memberId);
+      const holidays = await storage.getHolidaysByMember(memberId);
+      res.json(holidays);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch member holidays" });
+    }
+  });
+
+  app.post("/api/holidays", async (req, res) => {
+    try {
+      const holiday = insertHolidaySchema.parse(req.body);
+      const newHoliday = await storage.createHoliday(holiday);
+      res.status(201).json(newHoliday);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid holiday data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create holiday" });
+    }
+  });
+
+  app.delete("/api/holidays/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteHoliday(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Holiday not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete holiday" });
     }
   });
 

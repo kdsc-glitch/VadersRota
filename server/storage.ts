@@ -566,7 +566,8 @@ export class MemStorage implements IStorage {
     const newHoliday: Holiday = { 
       ...holiday, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      description: holiday.description ?? null
     };
     this.holidays.set(id, newHoliday);
     return newHoliday;
