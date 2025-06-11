@@ -48,7 +48,10 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       for (const assignment of allAssignments) {
         try {
           const response: any = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
+          console.log('Assignment:', assignment.id, 'Response:', response);
+          
           if (response.hasConflict) {
+            console.log('Found conflict for assignment:', assignment.id, 'Members:', response.conflictingMembers);
             // Store conflict info for each date in the assignment range
             const startDate = new Date(assignment.startDate);
             const endDate = new Date(assignment.endDate);
@@ -56,6 +59,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
             const currentDate = new Date(startDate);
             while (currentDate <= endDate) {
               const dateStr = currentDate.toISOString().split('T')[0];
+              console.log('Adding conflict for date:', dateStr);
               conflictMap.set(dateStr, {
                 hasConflict: true,
                 conflictingMembers: response.conflictingMembers,
