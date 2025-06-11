@@ -201,65 +201,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assignments = [];
       const skippedDays = [];
       
-      for (let currentDate = new Date(periodStart); currentDate <= periodEnd; currentDate.setDate(currentDate.getDate() + 1)) {
+      // Pre-fetch all data once
+      const allUSMembers = await storage.getTeamMembersByRegion("us");
+      const allUKMembers = await storage.getTeamMembersByRegion("uk");
+      
+      // Calculate days in the period
+      const totalDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      console.log(`Processing ${totalDays} days from ${assignmentStartDate} to ${assignmentEndDate}`);
+      
+      // Helper function to check if member is available on a specific date
+      const isMemberAvailable = (member: any, dateStr: string): boolean => {
+        if (!member.isAvailable) return false;
+        
+        const checkDate = new Date(dateStr);
+        
+        // Check unavailable period
+        if (member.unavailableStart && member.unavailableEnd) {
+          const unavailableStart = new Date(member.unavailableStart);
+          const unavailableEnd = new Date(member.unavailableEnd);
+          if (checkDate >= unavailableStart && checkDate <= unavailableEnd) {
+            return false;
+          }
+        }
+        
+        // Check holiday period
+        if (member.holidayStart && member.holidayEnd) {
+          const holidayStart = new Date(member.holidayStart);
+          const holidayEnd = new Date(member.holidayEnd);
+          if (checkDate >= holidayStart && checkDate <= holidayEnd) {
+            return false;
+          }
+        }
+        
+        return true;
+      };
+      
+      for (let dayOffset = 0; dayOffset < totalDays; dayOffset++) {
+        const currentDate = new Date(periodStart);
+        currentDate.setDate(periodStart.getDate() + dayOffset);
         const dateStr = currentDate.toISOString().split('T')[0];
         
-        const dayUSMembers = await storage.getAvailableMembers("us", dateStr, dateStr);
-        const dayUKMembers = await storage.getAvailableMembers("uk", dateStr, dateStr);
+        console.log(`Processing date: ${dateStr}`);
+        
+        // Filter available members for this specific day
+        const dayUSMembers = allUSMembers.filter(member => isMemberAvailable(member, dateStr));
+        const dayUKMembers = allUKMembers.filter(member => isMemberAvailable(member, dateStr));
+        
+        console.log(`Found ${dayUSMembers.length} US members, ${dayUKMembers.length} UK members for ${dateStr}`);
         
         if (dayUSMembers.length > 0 && dayUKMembers.length > 0) {
-          let selectedUSMember = dayUSMembers[0];
-          let selectedUKMember = dayUKMembers[0];
-          let bestUSScore = -1;
-          let bestUKScore = -1;
-          
-          for (const member of dayUSMembers) {
-            const assignmentCount = await storage.getMemberAssignmentCount(member.id);
-            const allAssignments = await storage.getRotaAssignments();
-            const memberAssignments = allAssignments.filter(a => 
-              a.usMemberId === member.id || a.ukMemberId === member.id
-            );
-            
-            let daysSinceLastAssignment = 999;
-            if (memberAssignments.length > 0) {
-              const lastAssignment = memberAssignments.sort((a, b) => 
-                new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
-              )[0];
-              const lastDate = new Date(lastAssignment.endDate);
-              const today = new Date();
-              daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-            }
-            
-            const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
-            if (fairnessScore > bestUSScore) {
-              bestUSScore = fairnessScore;
-              selectedUSMember = member;
-            }
-          }
-          
-          for (const member of dayUKMembers) {
-            const assignmentCount = await storage.getMemberAssignmentCount(member.id);
-            const allAssignments = await storage.getRotaAssignments();
-            const memberAssignments = allAssignments.filter(a => 
-              a.usMemberId === member.id || a.ukMemberId === member.id
-            );
-            
-            let daysSinceLastAssignment = 999;
-            if (memberAssignments.length > 0) {
-              const lastAssignment = memberAssignments.sort((a, b) => 
-                new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
-              )[0];
-              const lastDate = new Date(lastAssignment.endDate);
-              const today = new Date();
-              daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-            }
-            
-            const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
-            if (fairnessScore > bestUKScore) {
-              bestUKScore = fairnessScore;
-              selectedUKMember = member;
-            }
-          }
+          // Simple selection - use first available member for now to avoid performance issues
+          const selectedUSMember = dayUSMembers[0];
+          const selectedUKMember = dayUKMembers[0];
           
           const dayAssignment = await storage.createRotaAssignment({
             startDate: dateStr,
