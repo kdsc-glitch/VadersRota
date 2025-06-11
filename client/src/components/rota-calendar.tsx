@@ -131,7 +131,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const autoAssignMutation = useMutation({
     mutationFn: async () => {
       const weekStartStr = startOfWeek.toISOString().split('T')[0];
-      const weekEndStr = weekDates[6].toISOString().split('T')[0];
+      const weekEndStr = weekDates[4].toISOString().split('T')[0];
       
       // Simulate loading stages for better UX
       setLoadingStage("Analyzing team availability...");

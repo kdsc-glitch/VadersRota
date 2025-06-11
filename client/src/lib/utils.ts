@@ -28,9 +28,13 @@ export function isDateInRange(date: string | Date, start: string | Date, end: st
 export function getWeekDates(startDate?: Date): Date[] {
   const start = startDate || new Date();
   const startOfWeek = new Date(start);
-  startOfWeek.setDate(start.getDate() - start.getDay());
+  // Set to Monday (1) instead of Sunday (0)
+  const dayOfWeek = start.getDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  startOfWeek.setDate(start.getDate() - daysFromMonday);
   
-  return Array.from({ length: 7 }, (_, i) => {
+  // Only return Monday through Friday (5 days)
+  return Array.from({ length: 5 }, (_, i) => {
     const date = new Date(startOfWeek);
     date.setDate(startOfWeek.getDate() + i);
     return date;

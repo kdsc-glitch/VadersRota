@@ -241,7 +241,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentDate.setDate(periodStart.getDate() + dayOffset);
         const dateStr = currentDate.toISOString().split('T')[0];
         
-        console.log(`Processing date: ${dateStr}`);
+        // Skip weekends (Saturday = 6, Sunday = 0) - only process Monday-Friday
+        const dayOfWeek = currentDate.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          console.log(`Skipping weekend day: ${dateStr}`);
+          continue;
+        }
+        
+        console.log(`Processing weekday: ${dateStr}`);
         
         // Filter available members for this specific day
         const dayUSMembers = allUSMembers.filter(member => isMemberAvailable(member, dateStr));
