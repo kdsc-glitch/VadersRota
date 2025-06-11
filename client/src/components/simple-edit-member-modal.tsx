@@ -71,17 +71,44 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
         holidayEnd: member.holidayEnd || undefined,
       });
 
-      // Initialize holiday periods
-      if (member.holidayStart && member.holidayEnd) {
-        setHolidayPeriods([{
-          id: "existing",
-          startDate: new Date(member.holidayStart),
-          endDate: new Date(member.holidayEnd),
-          description: "Existing Holiday"
-        }]);
-      } else {
-        setHolidayPeriods([]);
-      }
+      // Load existing holiday periods from database
+      const loadHolidayPeriods = async () => {
+        try {
+          const existingHolidays = await apiRequest("GET", `/api/holidays/member/${member.id}`);
+          const holidayPeriodsData = existingHolidays.map((holiday: any) => ({
+            id: holiday.id.toString(),
+            startDate: new Date(holiday.startDate),
+            endDate: new Date(holiday.endDate),
+            description: holiday.description || `Holiday ${new Date(holiday.startDate).toLocaleDateString()}`
+          }));
+          
+          // If no holidays in database but legacy holiday fields exist, use those
+          if (holidayPeriodsData.length === 0 && member.holidayStart && member.holidayEnd) {
+            setHolidayPeriods([{
+              id: "legacy",
+              startDate: new Date(member.holidayStart),
+              endDate: new Date(member.holidayEnd),
+              description: "Existing Holiday"
+            }]);
+          } else {
+            setHolidayPeriods(holidayPeriodsData);
+          }
+        } catch (error) {
+          // Fallback to legacy holiday fields if API fails
+          if (member.holidayStart && member.holidayEnd) {
+            setHolidayPeriods([{
+              id: "legacy",
+              startDate: new Date(member.holidayStart),
+              endDate: new Date(member.holidayEnd),
+              description: "Existing Holiday"
+            }]);
+          } else {
+            setHolidayPeriods([]);
+          }
+        }
+      };
+
+      loadHolidayPeriods();
     }
   }, [member, form]);
 
