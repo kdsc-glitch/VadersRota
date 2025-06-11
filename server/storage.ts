@@ -315,9 +315,9 @@ export class MemStorage implements IStorage {
   private initializeData() {
     // US Team Members
     const usMembers: Omit<TeamMember, 'id'>[] = [
-      { name: "Sarah Chen", email: "sarah.chen@company.com", region: "us", role: "senior_developer", isAvailable: true, holidayStart: null, holidayEnd: null },
-      { name: "Mike Rodriguez", email: "mike.rodriguez@company.com", region: "us", role: "developer", isAvailable: true, holidayStart: null, holidayEnd: null },
-      { name: "Alex Kumar", email: "alex.kumar@company.com", region: "us", role: "team_lead", isAvailable: true, holidayStart: null, holidayEnd: null },
+      { name: "Sarah Chen", email: "sarah.chen@company.com", region: "us", role: "senior_developer", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
+      { name: "Mike Rodriguez", email: "mike.rodriguez@company.com", region: "us", role: "developer", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
+      { name: "Alex Kumar", email: "alex.kumar@company.com", region: "us", role: "team_lead", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
     ];
 
     // UK Team Members
