@@ -9,6 +9,7 @@ import { useState } from "react";
 import { HolidayManagementModal } from "./holiday-management-modal";
 import { XMattersSyncModal } from "./xmatters-sync-modal";
 import { FairnessReportModal } from "./fairness-report-modal";
+import { EditMemberModal } from "./edit-member-modal";
 import type { TeamMember } from "@shared/schema";
 
 interface TeamManagementProps {
@@ -21,6 +22,8 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
   const [showHolidayModal, setShowHolidayModal] = useState(false);
   const [showXMattersModal, setShowXMattersModal] = useState(false);
   const [showFairnessModal, setShowFairnessModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
   const autoAssignMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/rota-assignments/auto-assign"),
@@ -69,6 +72,16 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
     return name.split(' ').map(n => n[0]).join('');
   };
 
+  const handleEditMember = (member: TeamMember) => {
+    setSelectedMember(member);
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedMember(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Team Members */}
@@ -106,7 +119,7 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(member)}
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => handleEditMember(member)}>
                       <Edit className="w-4 h-4" />
                     </Button>
                   </div>
@@ -137,7 +150,7 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(member)}
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => handleEditMember(member)}>
                       <Edit className="w-4 h-4" />
                     </Button>
                   </div>
