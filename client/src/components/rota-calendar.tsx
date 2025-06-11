@@ -215,16 +215,29 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
         return assignmentStart <= weekEnd && assignmentEnd >= weekStart;
       });
       
-      // Delete all assignments for this week
+      // Delete all assignments for this week with better error handling
+      const results = [];
       for (const assignment of weekAssignments) {
         try {
           await apiRequest("DELETE", `/api/rota-assignments/${assignment.id}`);
           console.log('Successfully deleted assignment:', assignment.id);
+          results.push({ id: assignment.id, success: true });
         } catch (error) {
           console.error('Failed to delete assignment:', assignment.id, error);
-          throw error;
+          // Continue with other deletions instead of throwing
+          results.push({ id: assignment.id, success: false, error });
         }
       }
+      
+      // Check if any deletions succeeded
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.filter(r => !r.success).length;
+      
+      if (successCount === 0 && failureCount > 0) {
+        throw new Error(`Failed to delete any assignments (${failureCount} failed)`);
+      }
+      
+      return { successCount, failureCount, total: weekAssignments.length };
     },
     onSuccess: () => {
       console.log('Clear week completed successfully');
@@ -280,14 +293,21 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
 
   const getDayAssignment = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
+    
     // First check for specific day assignment (startDate === endDate)
     const dayAssignment = allAssignments.find(assignment => 
       assignment.startDate === dateStr && assignment.endDate === dateStr
     );
     if (dayAssignment) return dayAssignment;
     
-    // Otherwise return the week assignment for this day
-    return weekAssignment;
+    // Then check if this date falls within a week assignment
+    const weekAssignmentForDate = allAssignments.find(assignment => 
+      dateStr >= assignment.startDate && 
+      dateStr <= assignment.endDate &&
+      assignment.startDate !== assignment.endDate // Ensure it's a week assignment
+    );
+    
+    return weekAssignmentForDate || null;
   };
 
   const getDayUSMember = (date: Date) => {
