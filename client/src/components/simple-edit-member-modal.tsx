@@ -5,6 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -12,35 +17,34 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertTeamMemberSchema, type TeamMember } from "@shared/schema";
-import { HolidayPeriodsManager } from "./holiday-periods-manager";
 import { z } from "zod";
 
-const editMemberSchema = insertTeamMemberSchema.omit({
-  holidayStart: true,
-  holidayEnd: true,
+const editMemberSchema = insertTeamMemberSchema.extend({
+  holidayStart: z.string().optional(),
+  holidayEnd: z.string().optional(),
 });
 
 type EditMemberFormData = z.infer<typeof editMemberSchema>;
 
 interface HolidayPeriod {
-  id?: number;
+  id: string;
   startDate: Date;
   endDate: Date;
-  description?: string;
+  description: string;
 }
 
-interface EditMemberModalProps {
+interface SimpleEditMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   member: TeamMember | null;
 }
 
-export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProps) {
+export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMemberModalProps) {
   const { toast } = useToast();
   const [holidayPeriods, setHolidayPeriods] = useState<HolidayPeriod[]>([]);
-  const [newHolidayStart, setNewHolidayStart] = useState<Date>();
-  const [newHolidayEnd, setNewHolidayEnd] = useState<Date>();
-  const [newHolidayDescription, setNewHolidayDescription] = useState("");
+  const [newStartDate, setNewStartDate] = useState<Date>();
+  const [newEndDate, setNewEndDate] = useState<Date>();
+  const [newDescription, setNewDescription] = useState("");
 
   const form = useForm<EditMemberFormData>({
     resolver: zodResolver(editMemberSchema),
@@ -54,7 +58,6 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
     },
   });
 
-  // Update form when member changes
   useEffect(() => {
     if (member) {
       form.reset({
@@ -64,14 +67,17 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
         role: member.role,
         isAvailable: member.isAvailable,
         isDsgMember: member.isDsgMember,
+        holidayStart: member.holidayStart || undefined,
+        holidayEnd: member.holidayEnd || undefined,
       });
 
-      // Convert existing holiday to new format if present
+      // Initialize holiday periods
       if (member.holidayStart && member.holidayEnd) {
         setHolidayPeriods([{
+          id: "existing",
           startDate: new Date(member.holidayStart),
           endDate: new Date(member.holidayEnd),
-          description: "Holiday Period"
+          description: "Existing Holiday"
         }]);
       } else {
         setHolidayPeriods([]);
@@ -123,12 +129,63 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
     },
   });
 
+  const addHolidayPeriod = () => {
+    if (newStartDate && newEndDate) {
+      if (newStartDate > newEndDate) {
+        toast({
+          title: "Invalid Date Range",
+          description: "Start date must be before or equal to end date",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const newHoliday: HolidayPeriod = {
+        id: Date.now().toString(),
+        startDate: newStartDate,
+        endDate: newEndDate,
+        description: newDescription || `Holiday ${format(newStartDate, "MMM dd")} - ${format(newEndDate, "MMM dd")}`
+      };
+
+      setHolidayPeriods([...holidayPeriods, newHoliday]);
+      
+      // Reset form
+      setNewStartDate(undefined);
+      setNewEndDate(undefined);
+      setNewDescription("");
+    } else {
+      toast({
+        title: "Missing Dates",
+        description: "Please select both start and end dates",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeHolidayPeriod = (id: string) => {
+    setHolidayPeriods(holidayPeriods.filter(h => h.id !== id));
+  };
+
   const onSubmit = (data: EditMemberFormData) => {
-    const formData = {
-      ...data,
-      holidayStart: holidayStartDate?.toISOString().split('T')[0] || undefined,
-      holidayEnd: holidayEndDate?.toISOString().split('T')[0] || undefined,
-    };
+    // For now, use the first holiday period or clear holidays
+    let formData = { ...data };
+    
+    if (holidayPeriods.length > 0) {
+      const firstHoliday = holidayPeriods[0];
+      formData.holidayStart = firstHoliday.startDate.toISOString().split('T')[0];
+      formData.holidayEnd = firstHoliday.endDate.toISOString().split('T')[0];
+    } else {
+      formData.holidayStart = undefined;
+      formData.holidayEnd = undefined;
+    }
+
+    if (holidayPeriods.length > 1) {
+      toast({
+        title: "Multiple Holidays Note",
+        description: "Currently only the first holiday period will be saved. Full multiple holiday support coming soon!",
+      });
+    }
+
     updateMemberMutation.mutate(formData);
   };
 
@@ -142,7 +199,7 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Team Member</DialogTitle>
         </DialogHeader>
@@ -263,72 +320,102 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
               />
             </div>
 
-            {/* Holiday Period */}
-            <div className="space-y-2">
-              <Label>Holiday Period (Optional)</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !holidayStartDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {holidayStartDate ? format(holidayStartDate, "MMM dd") : "Start date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={holidayStartDate}
-                      onSelect={setHolidayStartDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+            {/* Holiday Periods Management */}
+            <div className="space-y-4">
+              <Label className="text-sm font-medium">Holiday Periods</Label>
+              
+              {/* Existing holidays */}
+              {holidayPeriods.length > 0 && (
+                <div className="space-y-2">
+                  {holidayPeriods.map((holiday) => (
+                    <div key={holiday.id} className="flex items-center space-x-2 p-2 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">
+                          {format(holiday.startDate, "MMM dd, yyyy")} - {format(holiday.endDate, "MMM dd, yyyy")}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{holiday.description}</div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeHolidayPeriod(holiday.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !holidayEndDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {holidayEndDate ? format(holidayEndDate, "MMM dd") : "End date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={holidayEndDate}
-                      onSelect={setHolidayEndDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              {holidayStartDate || holidayEndDate ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setHolidayStartDate(undefined);
-                    setHolidayEndDate(undefined);
-                  }}
-                >
-                  Clear Holiday
+              {/* Add new holiday form */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <div className="text-sm font-medium">Add Holiday Period</div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !newStartDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newStartDate ? format(newStartDate, "MMM dd") : "Start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newStartDate}
+                        onSelect={setNewStartDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !newEndDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEndDate ? format(newEndDate, "MMM dd") : "End date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newEndDate}
+                        onSelect={setNewEndDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <Input
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="Holiday description (optional)"
+                />
+
+                <Button type="button" onClick={addHolidayPeriod} size="sm" className="w-full">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Holiday Period
                 </Button>
-              ) : null}
+              </div>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex justify-between pt-4">
               <Button
                 type="button"
                 variant="destructive"

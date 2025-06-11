@@ -9,7 +9,7 @@ import { useState } from "react";
 import { HolidayManagementModal } from "./holiday-management-modal";
 import { XMattersSyncModal } from "./xmatters-sync-modal";
 import { FairnessReportModal } from "./fairness-report-modal";
-import { EditMemberModal } from "./edit-member-modal";
+import { SimpleEditMemberModal } from "./simple-edit-member-modal";
 import type { TeamMember } from "@shared/schema";
 
 interface TeamManagementProps {
@@ -243,7 +243,7 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
         onClose={() => setShowFairnessModal(false)}
       />
       
-      <EditMemberModal
+      <SimpleEditMemberModal
         isOpen={showEditModal}
         onClose={handleCloseEditModal}
         member={selectedMember}
