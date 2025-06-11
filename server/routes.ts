@@ -201,13 +201,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const testUSMembers = await storage.getAvailableMembers("us", testStartDate, testEndDate);
           const testUKMembers = await storage.getAvailableMembers("uk", testStartDate, testEndDate);
           
-          console.log(`Testing week ${testStartDate} to ${testEndDate}: US=${testUSMembers.length}, UK=${testUKMembers.length}`);
-          
           if (testUSMembers.length > 0 && testUKMembers.length > 0) {
             assignmentStartDate = testStartDate;
             assignmentEndDate = testEndDate;
             weekFound = true;
-            console.log(`Found available week: ${testStartDate} to ${testEndDate}`);
           } else {
             // Try next week
             attemptDate.setDate(attemptDate.getDate() + 7);
@@ -226,9 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const usMembers = await storage.getAvailableMembers("us", assignmentStartDate, assignmentEndDate);
       const ukMembers = await storage.getAvailableMembers("uk", assignmentStartDate, assignmentEndDate);
 
-      console.log(`Auto-assign debug: Checking period ${assignmentStartDate} to ${assignmentEndDate}`);
-      console.log(`Available US members: ${usMembers.length}`, usMembers.map(m => m.name));
-      console.log(`Available UK members: ${ukMembers.length}`, ukMembers.map(m => m.name));
+
 
       if (usMembers.length === 0 || ukMembers.length === 0) {
         return res.status(400).json({ 
