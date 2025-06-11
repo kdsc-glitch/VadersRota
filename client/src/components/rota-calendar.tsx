@@ -53,13 +53,15 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
             const startDate = new Date(assignment.startDate);
             const endDate = new Date(assignment.endDate);
             
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-              const dateStr = d.toISOString().split('T')[0];
+            const currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+              const dateStr = currentDate.toISOString().split('T')[0];
               conflictMap.set(dateStr, {
                 hasConflict: true,
                 conflictingMembers: response.conflictingMembers,
                 assignment
               });
+              currentDate.setDate(currentDate.getDate() + 1);
             }
           }
         } catch (error) {
@@ -67,6 +69,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
         }
       }
       
+      console.log('Final conflict map:', conflictMap);
       setHolidayConflicts(conflictMap);
     };
     
