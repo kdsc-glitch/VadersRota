@@ -9,6 +9,8 @@ export const teamMembers = pgTable("team_members", {
   region: text("region").notNull(), // "us" or "uk"
   role: text("role").notNull().default("developer"),
   isAvailable: boolean("is_available").notNull().default(true),
+  unavailableStart: date("unavailable_start"),
+  unavailableEnd: date("unavailable_end"),
   holidayStart: date("holiday_start"),
   holidayEnd: date("holiday_end"),
 });
