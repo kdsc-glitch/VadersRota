@@ -50,7 +50,6 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
       region: "us",
       role: "developer",
       isAvailable: true,
-      isDsgMember: false,
     },
   });
 
@@ -63,7 +62,6 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
         region: member.region,
         role: member.role,
         isAvailable: member.isAvailable,
-        isDsgMember: member.isDsgMember,
       });
 
       // Convert existing holiday to new format if present

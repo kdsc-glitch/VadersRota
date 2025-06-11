@@ -315,16 +315,16 @@ export class MemStorage implements IStorage {
   private initializeData() {
     // US Team Members
     const usMembers: Omit<TeamMember, 'id'>[] = [
-      { name: "Sarah Chen", email: "sarah.chen@company.com", region: "us", role: "senior_developer", isAvailable: true, isDsgMember: false, holidayStart: null, holidayEnd: null },
-      { name: "Mike Rodriguez", email: "mike.rodriguez@company.com", region: "us", role: "developer", isAvailable: true, isDsgMember: false, holidayStart: null, holidayEnd: null },
-      { name: "Alex Kumar", email: "alex.kumar@company.com", region: "us", role: "team_lead", isAvailable: true, isDsgMember: true, holidayStart: null, holidayEnd: null },
+      { name: "Sarah Chen", email: "sarah.chen@company.com", region: "us", role: "senior_developer", isAvailable: true, holidayStart: null, holidayEnd: null },
+      { name: "Mike Rodriguez", email: "mike.rodriguez@company.com", region: "us", role: "developer", isAvailable: true, holidayStart: null, holidayEnd: null },
+      { name: "Alex Kumar", email: "alex.kumar@company.com", region: "us", role: "team_lead", isAvailable: true, holidayStart: null, holidayEnd: null },
     ];
 
     // UK Team Members
     const ukMembers: Omit<TeamMember, 'id'>[] = [
-      { name: "James Wilson", email: "james.wilson@company.com", region: "uk", role: "senior_developer", isAvailable: true, isDsgMember: false, holidayStart: null, holidayEnd: null },
-      { name: "Emma Knight", email: "emma.knight@company.com", region: "uk", role: "developer", isAvailable: true, isDsgMember: false, holidayStart: null, holidayEnd: null },
-      { name: "David Parker", email: "david.parker@company.com", region: "uk", role: "developer", isAvailable: false, isDsgMember: false, holidayStart: "2024-12-10", holidayEnd: "2024-12-20" },
+      { name: "James Wilson", email: "james.wilson@company.com", region: "uk", role: "senior_developer", isAvailable: true, holidayStart: null, holidayEnd: null },
+      { name: "Emma Knight", email: "emma.knight@company.com", region: "uk", role: "developer", isAvailable: true, holidayStart: null, holidayEnd: null },
+      { name: "David Parker", email: "david.parker@company.com", region: "uk", role: "developer", isAvailable: false, holidayStart: "2024-12-10", holidayEnd: "2024-12-20" },
     ];
 
     [...usMembers, ...ukMembers].forEach(member => {
@@ -372,7 +372,6 @@ export class MemStorage implements IStorage {
       id,
       role: member.role || "developer",
       isAvailable: member.isAvailable ?? true,
-      isDsgMember: member.isDsgMember ?? false,
       holidayStart: member.holidayStart || null,
       holidayEnd: member.holidayEnd || null
     };
