@@ -20,6 +20,8 @@ import { insertTeamMemberSchema, type TeamMember } from "@shared/schema";
 import { z } from "zod";
 
 const editMemberSchema = insertTeamMemberSchema.extend({
+  unavailableStart: z.string().optional(),
+  unavailableEnd: z.string().optional(),
   holidayStart: z.string().optional(),
   holidayEnd: z.string().optional(),
 });
@@ -65,6 +67,8 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
         region: member.region,
         role: member.role,
         isAvailable: member.isAvailable,
+        unavailableStart: member.unavailableStart || undefined,
+        unavailableEnd: member.unavailableEnd || undefined,
         holidayStart: member.holidayStart || undefined,
         holidayEnd: member.holidayEnd || undefined,
       });

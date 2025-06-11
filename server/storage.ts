@@ -322,9 +322,9 @@ export class MemStorage implements IStorage {
 
     // UK Team Members
     const ukMembers: Omit<TeamMember, 'id'>[] = [
-      { name: "James Wilson", email: "james.wilson@company.com", region: "uk", role: "senior_developer", isAvailable: true, holidayStart: null, holidayEnd: null },
-      { name: "Emma Knight", email: "emma.knight@company.com", region: "uk", role: "developer", isAvailable: true, holidayStart: null, holidayEnd: null },
-      { name: "David Parker", email: "david.parker@company.com", region: "uk", role: "developer", isAvailable: false, holidayStart: "2024-12-10", holidayEnd: "2024-12-20" },
+      { name: "James Wilson", email: "james.wilson@company.com", region: "uk", role: "senior_developer", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
+      { name: "Emma Knight", email: "emma.knight@company.com", region: "uk", role: "developer", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
+      { name: "David Parker", email: "david.parker@company.com", region: "uk", role: "developer", isAvailable: false, unavailableStart: null, unavailableEnd: null, holidayStart: "2024-12-10", holidayEnd: "2024-12-20" },
     ];
 
     [...usMembers, ...ukMembers].forEach(member => {
@@ -372,6 +372,8 @@ export class MemStorage implements IStorage {
       id,
       role: member.role || "developer",
       isAvailable: member.isAvailable ?? true,
+      unavailableStart: member.unavailableStart || null,
+      unavailableEnd: member.unavailableEnd || null,
       holidayStart: member.holidayStart || null,
       holidayEnd: member.holidayEnd || null
     };
