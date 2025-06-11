@@ -9,7 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertRotaAssignmentSchema } from "@shared/schema";
 import { z } from "zod";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, Loader2, Sparkles } from "lucide-react";
 import type { TeamMember } from "@shared/schema";
 
 const quickAssignSchema = insertRotaAssignmentSchema.extend({

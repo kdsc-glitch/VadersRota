@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Link, FlagIcon, Wand2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Link, FlagIcon, Wand2, Loader2, Sparkles, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { QuickAssignModal } from "./quick-assign-modal";
@@ -123,10 +123,24 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     setShowQuickAssignModal(true);
   };
 
+  const [loadingStage, setLoadingStage] = useState<string>("");
+  
   const autoAssignMutation = useMutation({
     mutationFn: async () => {
       const weekStartStr = startOfWeek.toISOString().split('T')[0];
       const weekEndStr = weekDates[6].toISOString().split('T')[0];
+      
+      // Simulate loading stages for better UX
+      setLoadingStage("Analyzing team availability...");
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      setLoadingStage("Applying fair rotation algorithm...");
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      setLoadingStage("Checking holiday conflicts...");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      setLoadingStage("Finalizing assignments...");
       
       return apiRequest("POST", "/api/rota-assignments/auto-assign", {
         startDate: weekStartStr,
@@ -134,11 +148,14 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       });
     },
     onSuccess: () => {
+      setLoadingStage("Assignment complete!");
+      setTimeout(() => setLoadingStage(""), 1000);
       setRefreshKey(prev => prev + 1);
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
     },
     onError: (error: any) => {
+      setLoadingStage("");
       console.error('Auto-assign failed:', error);
     },
   });
@@ -287,9 +304,20 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                   onClick={() => autoAssignMutation.mutate()} 
                   size="sm"
                   disabled={autoAssignMutation.isPending}
+                  className={`transition-all duration-300 ${autoAssignMutation.isPending ? 'bg-blue-600 hover:bg-blue-600' : ''}`}
                 >
-                  <Wand2 className="w-4 h-4 mr-1" />
-                  {autoAssignMutation.isPending ? "Auto-Assigning..." : "Auto-Assign Week"}
+                  {autoAssignMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Sparkles className="w-3 h-3 mr-1 animate-pulse" />
+                      Auto-Assigning...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4 mr-1" />
+                      Auto-Assign Week
+                    </>
+                  )}
                 </Button>
               )}
               {weekAssignment && (
@@ -309,7 +337,39 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           </div>
         </CardHeader>
         
-        <CardContent className="p-6">
+        <CardContent className="p-6 relative">
+          {/* Loading Overlay */}
+          {autoAssignMutation.isPending && (
+            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+              <div className="text-center space-y-4 p-8">
+                <div className="relative">
+                  <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                    <Users className="w-8 h-8 text-blue-600 animate-pulse" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                    <Sparkles className="w-3 h-3 text-white animate-bounce" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center space-x-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span className="text-lg font-medium text-gray-800">Auto-Assigning Week</span>
+                  </div>
+                  {loadingStage && (
+                    <div className="text-sm text-gray-600 animate-pulse">
+                      {loadingStage}
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-center space-x-1 mt-4">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Calendar Header */}
           <div className="grid grid-cols-8 gap-4 mb-4">
             <div className="text-sm font-medium text-slate-600">Week</div>

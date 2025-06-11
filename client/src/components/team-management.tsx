@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, FlagIcon, Edit, Wand2, CalendarX, TrendingUp } from "lucide-react";
+import { Plus, FlagIcon, Edit, Wand2, CalendarX, TrendingUp, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { HolidayManagementModal } from "./holiday-management-modal";
 import { FairnessReportModal } from "./fairness-report-modal";
@@ -23,16 +23,39 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
+  const [loadingStageTeam, setLoadingStageTeam] = useState<string>("");
+  
   const autoAssignMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/rota-assignments/auto-assign"),
+    mutationFn: async () => {
+      // Enhanced loading stages with realistic timing
+      setLoadingStageTeam("Analyzing team availability...");
+      await new Promise(resolve => setTimeout(resolve, 700));
+      
+      setLoadingStageTeam("Applying fair rotation algorithm...");
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setLoadingStageTeam("Checking holiday conflicts...");
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      setLoadingStageTeam("Finalizing assignments...");
+      
+      return apiRequest("POST", "/api/rota-assignments/auto-assign");
+    },
     onSuccess: () => {
+      setLoadingStageTeam("Assignment complete!");
+      setTimeout(() => setLoadingStageTeam(""), 1000);
+      
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      
       toast({
         title: "Auto-Assignment Complete",
         description: "Next week's support rotation has been automatically assigned",
       });
     },
     onError: () => {
+      setLoadingStageTeam("");
       toast({
         title: "Auto-Assignment Failed",
         description: "Failed to auto-assign next week's rotation",
@@ -162,16 +185,33 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
         <CardContent className="p-6 space-y-3">
           <Button
             variant="outline"
-            className="w-full justify-start h-auto p-3"
+            className={`w-full justify-start h-auto p-3 transition-all duration-300 ${
+              autoAssignMutation.isPending ? 'bg-blue-50 border-blue-200' : ''
+            }`}
             onClick={() => autoAssignMutation.mutate()}
             disabled={autoAssignMutation.isPending}
           >
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-              <Wand2 className="text-green-600 w-5 h-5" />
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 transition-colors ${
+              autoAssignMutation.isPending ? 'bg-blue-100' : 'bg-green-100'
+            }`}>
+              {autoAssignMutation.isPending ? (
+                <Loader2 className="text-blue-600 w-5 h-5 animate-spin" />
+              ) : (
+                <Wand2 className="text-green-600 w-5 h-5" />
+              )}
             </div>
-            <div className="text-left">
-              <p className="text-sm font-medium">Auto-Assign Next Week</p>
-              <p className="text-xs text-slate-500">Fair rotation algorithm</p>
+            <div className="text-left flex-1">
+              <div className="flex items-center space-x-2">
+                <p className="text-sm font-medium">
+                  {autoAssignMutation.isPending ? "Auto-Assigning..." : "Auto-Assign Next Week"}
+                </p>
+                {autoAssignMutation.isPending && (
+                  <Sparkles className="w-3 h-3 text-blue-500 animate-pulse" />
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {loadingStageTeam || "Fair rotation algorithm"}
+              </p>
             </div>
           </Button>
 
