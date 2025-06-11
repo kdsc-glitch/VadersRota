@@ -73,9 +73,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     setShowQuickAssignModal(true);
   };
 
-  const handleDayClick = (date: Date, event: React.MouseEvent) => {
-    event.stopPropagation();
-    
+  const handleDayClick = (date: Date) => {
     // Check if there's a specific assignment for this day
     const dateStr = date.toISOString().split('T')[0];
     const dayAssignment = allAssignments.find(assignment => 
@@ -252,6 +250,14 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
         weekStartDate={weekStartStr}
         weekEndDate={weekEndStr}
         existingAssignment={selectedWeekAssignment}
+      />
+
+      <DayAssignModal
+        isOpen={showDayAssignModal}
+        onClose={() => setShowDayAssignModal(false)}
+        teamMembers={teamMembers}
+        selectedDate={selectedDate}
+        existingAssignment={selectedDayAssignment}
       />
     </div>
   );

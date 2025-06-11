@@ -183,22 +183,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Not enough available members for both regions" });
       }
 
-      // Fair rotation: select member with least assignments
+      // Enhanced fair rotation: consider both assignment count and time since last assignment
       let selectedUSMember = usMembers[0];
       let selectedUKMember = ukMembers[0];
+      let bestUSScore = -1;
+      let bestUKScore = -1;
 
+      // Calculate fairness score for each member (higher score = more deserving of assignment)
       for (const member of usMembers) {
-        const memberCount = await storage.getMemberAssignmentCount(member.id);
-        const selectedCount = await storage.getMemberAssignmentCount(selectedUSMember.id);
-        if (memberCount < selectedCount) {
+        const assignmentCount = await storage.getMemberAssignmentCount(member.id);
+        
+        // Get the member's last assignment date to calculate time since last assignment
+        const allAssignments = await storage.getRotaAssignments();
+        const memberAssignments = allAssignments.filter(a => 
+          a.usMemberId === member.id || a.ukMemberId === member.id
+        );
+        
+        let daysSinceLastAssignment = 999; // Default for never assigned
+        if (memberAssignments.length > 0) {
+          const lastAssignment = memberAssignments.sort((a, b) => 
+            new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+          )[0];
+          const lastDate = new Date(lastAssignment.endDate);
+          const today = new Date();
+          daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
+        
+        // Fairness score: prioritize members with fewer assignments and longer time since last assignment
+        const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
+        
+        if (fairnessScore > bestUSScore) {
+          bestUSScore = fairnessScore;
           selectedUSMember = member;
         }
       }
 
       for (const member of ukMembers) {
-        const memberCount = await storage.getMemberAssignmentCount(member.id);
-        const selectedCount = await storage.getMemberAssignmentCount(selectedUKMember.id);
-        if (memberCount < selectedCount) {
+        const assignmentCount = await storage.getMemberAssignmentCount(member.id);
+        
+        // Get the member's last assignment date
+        const allAssignments = await storage.getRotaAssignments();
+        const memberAssignments = allAssignments.filter(a => 
+          a.usMemberId === member.id || a.ukMemberId === member.id
+        );
+        
+        let daysSinceLastAssignment = 999; // Default for never assigned
+        if (memberAssignments.length > 0) {
+          const lastAssignment = memberAssignments.sort((a, b) => 
+            new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+          )[0];
+          const lastDate = new Date(lastAssignment.endDate);
+          const today = new Date();
+          daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
+        
+        // Fairness score: prioritize members with fewer assignments and longer time since last assignment
+        const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
+        
+        if (fairnessScore > bestUKScore) {
+          bestUKScore = fairnessScore;
           selectedUKMember = member;
         }
       }
