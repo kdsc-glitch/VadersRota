@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, Link, FlagIcon, Wand2 } from "lucide-r
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QuickAssignModal } from "./quick-assign-modal";
+import { DayAssignModal } from "./day-assign-modal";
 import type { TeamMember, RotaAssignment } from "@shared/schema";
 
 interface RotaCalendarProps {
@@ -16,7 +17,10 @@ interface RotaCalendarProps {
 export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }: RotaCalendarProps) {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [showQuickAssignModal, setShowQuickAssignModal] = useState(false);
+  const [showDayAssignModal, setShowDayAssignModal] = useState(false);
   const [selectedWeekAssignment, setSelectedWeekAssignment] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedDayAssignment, setSelectedDayAssignment] = useState<any>(null);
   
   // Generate calendar dates for the current week (with offset)
   const today = new Date();
@@ -69,10 +73,18 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     setShowQuickAssignModal(true);
   };
 
-  const handleDayClick = (date: Date) => {
-    // For day-level assignments, we still work at week level but focus on the clicked day's week
-    setSelectedWeekAssignment(weekAssignment);
-    setShowQuickAssignModal(true);
+  const handleDayClick = (date: Date, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    // Check if there's a specific assignment for this day
+    const dateStr = date.toISOString().split('T')[0];
+    const dayAssignment = allAssignments.find(assignment => 
+      assignment.startDate === dateStr && assignment.endDate === dateStr
+    );
+    
+    setSelectedDate(dateStr);
+    setSelectedDayAssignment(dayAssignment || null);
+    setShowDayAssignModal(true);
   };
 
   const getNameInitials = (name: string) => {

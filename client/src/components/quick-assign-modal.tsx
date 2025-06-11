@@ -81,33 +81,10 @@ export function QuickAssignModal({
 
   const autoAssignMutation = useMutation({
     mutationFn: async () => {
-      // Find members with least assignments for fair rotation
-      const usAvailable = usMembers;
-      const ukAvailable = ukMembers;
-
-      if (usAvailable.length === 0 || ukAvailable.length === 0) {
-        throw new Error("Not enough available members");
-      }
-
-      // For simplicity, select first available member from each region
-      // In a real implementation, this would check assignment history for fairness
-      const selectedUS = usAvailable[0];
-      const selectedUK = ukAvailable[0];
-
-      const assignmentData = {
+      return apiRequest("POST", "/api/rota-assignments/auto-assign", {
         startDate: weekStartDate,
         endDate: weekEndDate,
-        usMemberId: selectedUS.id,
-        ukMemberId: selectedUK.id,
-        notes: "Auto-assigned using fair rotation",
-        isManual: false,
-      };
-
-      if (existingAssignment) {
-        return apiRequest("PATCH", `/api/rota-assignments/${existingAssignment.id}`, assignmentData);
-      } else {
-        return apiRequest("POST", "/api/rota-assignments", assignmentData);
-      }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });

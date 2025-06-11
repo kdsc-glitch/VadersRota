@@ -155,22 +155,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auto-assign next week
+  // Auto-assign for any week
   app.post("/api/rota-assignments/auto-assign", async (req, res) => {
     try {
-      // Calculate next week's dates
-      const today = new Date();
-      const nextMonday = new Date(today);
-      nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
-      const nextSunday = new Date(nextMonday);
-      nextSunday.setDate(nextMonday.getDate() + 6);
+      const { startDate, endDate } = req.body;
+      
+      // If no dates provided, use next week
+      let assignmentStartDate = startDate;
+      let assignmentEndDate = endDate;
+      
+      if (!startDate || !endDate) {
+        const today = new Date();
+        const nextMonday = new Date(today);
+        nextMonday.setDate(today.getDate() + (8 - today.getDay()) % 7);
+        const nextSunday = new Date(nextMonday);
+        nextSunday.setDate(nextMonday.getDate() + 6);
 
-      const startDate = nextMonday.toISOString().split('T')[0];
-      const endDate = nextSunday.toISOString().split('T')[0];
+        assignmentStartDate = nextMonday.toISOString().split('T')[0];
+        assignmentEndDate = nextSunday.toISOString().split('T')[0];
+      }
 
       // Get available members for each region
-      const usMembers = await storage.getAvailableMembers("us", startDate, endDate);
-      const ukMembers = await storage.getAvailableMembers("uk", startDate, endDate);
+      const usMembers = await storage.getAvailableMembers("us", assignmentStartDate, assignmentEndDate);
+      const ukMembers = await storage.getAvailableMembers("uk", assignmentStartDate, assignmentEndDate);
 
       if (usMembers.length === 0 || ukMembers.length === 0) {
         return res.status(400).json({ message: "Not enough available members for both regions" });
@@ -197,8 +204,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const assignment = await storage.createRotaAssignment({
-        startDate,
-        endDate,
+        startDate: assignmentStartDate,
+        endDate: assignmentEndDate,
         usMemberId: selectedUSMember.id,
         ukMemberId: selectedUKMember.id,
         notes: "Auto-assigned using fair rotation algorithm",
