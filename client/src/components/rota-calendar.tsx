@@ -157,6 +157,17 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     onError: (error: any) => {
       setLoadingStage("");
       console.error('Auto-assign failed:', error);
+      
+      // Show detailed conflict information if available
+      if (error.response?.data?.conflicts) {
+        const conflicts = error.response.data.conflicts;
+        const conflictMessage = conflicts.length > 0 
+          ? `Conflicts detected:\n${conflicts.join('\n')}`
+          : error.response.data.message || "Auto-assignment failed";
+        
+        // Use browser alert for detailed conflict information
+        alert(`Auto-assignment failed for ${error.response.data.period || 'selected period'}:\n\n${conflictMessage}`);
+      }
     },
   });
 

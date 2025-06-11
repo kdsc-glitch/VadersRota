@@ -117,9 +117,18 @@ export function QuickAssignModal({
     },
     onError: (error: any) => {
       setLoadingStageModal("");
+      
+      // Show detailed conflict information if available
+      let errorMessage = "Failed to auto-assign week";
+      if (error.response?.data?.conflicts && error.response.data.conflicts.length > 0) {
+        errorMessage = `${error.response.data.message}\n\nConflicts:\n${error.response.data.conflicts.join('\n')}`;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
       toast({
         title: "Auto-Assignment Failed",
-        description: error.message || "Failed to auto-assign week",
+        description: errorMessage,
         variant: "destructive",
       });
     },

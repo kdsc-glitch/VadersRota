@@ -226,13 +226,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
       if (usMembers.length === 0 || ukMembers.length === 0) {
-        return res.status(400).json({ 
-          message: "Not enough available members for both regions",
-          debug: {
-            period: `${assignmentStartDate} to ${assignmentEndDate}`,
-            usAvailable: usMembers.length,
-            ukAvailable: ukMembers.length
+        // Get all team members to show holiday conflicts
+        const allUSMembers = await storage.getTeamMembersByRegion("us");
+        const allUKMembers = await storage.getTeamMembersByRegion("uk");
+        
+        const conflictDetails = [];
+        
+        // Check US conflicts
+        for (const member of allUSMembers) {
+          if (!member.isAvailable) {
+            conflictDetails.push(`${member.name} (US): Currently unavailable`);
+          } else if (member.holidayStart && member.holidayEnd) {
+            const holidayStart = new Date(member.holidayStart);
+            const holidayEnd = new Date(member.holidayEnd);
+            const assignStart = new Date(assignmentStartDate);
+            const assignEnd = new Date(assignmentEndDate);
+            
+            if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
+              conflictDetails.push(`${member.name} (US): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
+            }
+          } else if (member.unavailableStart && member.unavailableEnd) {
+            const unavailStart = new Date(member.unavailableStart);
+            const unavailEnd = new Date(member.unavailableEnd);
+            const assignStart = new Date(assignmentStartDate);
+            const assignEnd = new Date(assignmentEndDate);
+            
+            if (assignStart <= unavailEnd && assignEnd >= unavailStart) {
+              conflictDetails.push(`${member.name} (US): Unavailable ${member.unavailableStart} to ${member.unavailableEnd}`);
+            }
           }
+        }
+        
+        // Check UK conflicts
+        for (const member of allUKMembers) {
+          if (!member.isAvailable) {
+            conflictDetails.push(`${member.name} (UK): Currently unavailable`);
+          } else if (member.holidayStart && member.holidayEnd) {
+            const holidayStart = new Date(member.holidayStart);
+            const holidayEnd = new Date(member.holidayEnd);
+            const assignStart = new Date(assignmentStartDate);
+            const assignEnd = new Date(assignmentEndDate);
+            
+            if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
+              conflictDetails.push(`${member.name} (UK): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
+            }
+          } else if (member.unavailableStart && member.unavailableEnd) {
+            const unavailStart = new Date(member.unavailableStart);
+            const unavailEnd = new Date(member.unavailableEnd);
+            const assignStart = new Date(assignmentStartDate);
+            const assignEnd = new Date(assignmentEndDate);
+            
+            if (assignStart <= unavailEnd && assignEnd >= unavailStart) {
+              conflictDetails.push(`${member.name} (UK): Unavailable ${member.unavailableStart} to ${member.unavailableEnd}`);
+            }
+          }
+        }
+        
+        const message = usMembers.length === 0 && ukMembers.length === 0 
+          ? "No available members for either region during this period"
+          : usMembers.length === 0 
+            ? "No available US team members during this period"
+            : "No available UK team members during this period";
+        
+        return res.status(400).json({ 
+          message,
+          period: `${assignmentStartDate} to ${assignmentEndDate}`,
+          conflicts: conflictDetails,
+          availableUS: usMembers.length,
+          availableUK: ukMembers.length
         });
       }
 

@@ -54,11 +54,20 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
         description: "Next week's support rotation has been automatically assigned",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       setLoadingStageTeam("");
+      
+      // Show detailed conflict information if available
+      let errorMessage = "Failed to auto-assign next week's rotation";
+      if (error.response?.data?.conflicts && error.response.data.conflicts.length > 0) {
+        errorMessage = `${error.response.data.message}\n\nConflicts:\n${error.response.data.conflicts.join('\n')}`;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
       toast({
         title: "Auto-Assignment Failed",
-        description: "Failed to auto-assign next week's rotation",
+        description: errorMessage,
         variant: "destructive",
       });
     },
