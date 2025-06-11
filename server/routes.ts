@@ -352,6 +352,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check holiday conflicts for an assignment
+  app.post("/api/rota-assignments/check-conflicts", async (req, res) => {
+    try {
+      const assignment = req.body;
+      const conflicts = await storage.checkHolidayConflicts(assignment);
+      res.json(conflicts);
+    } catch (error) {
+      console.error("Error checking holiday conflicts:", error);
+      res.status(500).json({ error: "Failed to check conflicts" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

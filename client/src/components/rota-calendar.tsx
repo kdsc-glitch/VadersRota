@@ -2,10 +2,11 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Plus, Link, FlagIcon, Wand2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QuickAssignModal } from "./quick-assign-modal";
 import { DayAssignModal } from "./day-assign-modal";
+import { apiRequest } from "@/lib/queryClient";
 import type { TeamMember, RotaAssignment } from "@shared/schema";
 
 interface RotaCalendarProps {
@@ -21,6 +22,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const [selectedWeekAssignment, setSelectedWeekAssignment] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedDayAssignment, setSelectedDayAssignment] = useState<any>(null);
+  const [holidayConflicts, setHolidayConflicts] = useState<Map<string, any>>(new Map());
   
   // Generate calendar dates for the current week (with offset)
   const today = new Date();
@@ -37,6 +39,41 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const { data: allAssignments = [] } = useQuery<RotaAssignment[]>({
     queryKey: ["/api/rota-assignments"],
   });
+
+  // Check for holiday conflicts whenever assignments change
+  useEffect(() => {
+    const checkConflicts = async () => {
+      const conflictMap = new Map();
+      
+      for (const assignment of allAssignments) {
+        try {
+          const response = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
+          if (response.hasConflict) {
+            // Store conflict info for each date in the assignment range
+            const startDate = new Date(assignment.startDate);
+            const endDate = new Date(assignment.endDate);
+            
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+              const dateStr = d.toISOString().split('T')[0];
+              conflictMap.set(dateStr, {
+                hasConflict: true,
+                conflictingMembers: response.conflictingMembers,
+                assignment
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Error checking conflicts for assignment:", assignment.id, error);
+        }
+      }
+      
+      setHolidayConflicts(conflictMap);
+    };
+    
+    if (allAssignments.length > 0) {
+      checkConflicts();
+    }
+  }, [allAssignments]);
 
   // Find assignment that covers this week
   const weekStartStr = startOfWeek.toISOString().split('T')[0];
@@ -207,19 +244,25 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
             {weekDates.map((date, index) => {
               const dayUSMember = getDayUSMember(date);
               const isAssigned = !!dayUSMember;
+              const dateStr = date.toISOString().split('T')[0];
+              const conflict = holidayConflicts.get(dateStr);
+              const hasUSConflict = conflict && conflict.conflictingMembers.some((m: any) => m.region === 'us');
               
               return (
                 <div 
                   key={index} 
                   className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
-                    isAssigned 
-                      ? "bg-green-50 border-green-200 hover:bg-green-100" 
-                      : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                    hasUSConflict
+                      ? "bg-red-50 border-red-200 hover:bg-red-100"
+                      : isAssigned 
+                        ? "bg-green-50 border-green-200 hover:bg-green-100" 
+                        : "bg-slate-50 border-slate-200 hover:bg-slate-100"
                   }`}
                   onClick={() => handleDayClick(date)}
+                  title={hasUSConflict ? `Holiday conflict: ${conflict.conflictingMembers.filter((m: any) => m.region === 'us').map((m: any) => m.name).join(', ')}` : ''}
                 >
                   <div className={`text-xs font-medium ${
-                    isAssigned ? "text-green-800" : "text-slate-600"
+                    hasUSConflict ? "text-red-800" : isAssigned ? "text-green-800" : "text-slate-600"
                   }`}>
                     {dayUSMember 
                       ? getNameInitials(dayUSMember.name)
@@ -227,9 +270,9 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                     }
                   </div>
                   <div className={`text-xs ${
-                    isAssigned ? "text-green-600" : "text-slate-500"
+                    hasUSConflict ? "text-red-600" : isAssigned ? "text-green-600" : "text-slate-500"
                   }`}>
-                    {isAssigned ? "Assigned" : "Click to assign"}
+                    {hasUSConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
                   </div>
                 </div>
               );
