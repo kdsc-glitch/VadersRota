@@ -40,8 +40,7 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getTeamMembers(): Promise<TeamMember[]> {
-    const members = await db.select().from(teamMembers);
-    return members;
+    return await db.select().from(teamMembers);
   }
 
   async getTeamMemberById(id: number): Promise<TeamMember | undefined> {
@@ -50,15 +49,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTeamMembersByRegion(region: string): Promise<TeamMember[]> {
-    const members = await db.select().from(teamMembers).where(eq(teamMembers.region, region));
-    return members;
+    return await db.select().from(teamMembers).where(eq(teamMembers.region, region));
   }
 
   async createTeamMember(member: InsertTeamMember): Promise<TeamMember> {
-    const [newMember] = await db
-      .insert(teamMembers)
-      .values(member)
-      .returning();
+    const [newMember] = await db.insert(teamMembers).values(member).returning();
     return newMember;
   }
 
@@ -72,13 +67,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTeamMember(id: number): Promise<boolean> {
-    const result = await db.delete(teamMembers).where(eq(teamMembers.id, id));
-    return result.rowCount! > 0;
+    try {
+      await db.delete(teamMembers).where(eq(teamMembers.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting team member:", error);
+      return false;
+    }
   }
 
   async getRotaAssignments(): Promise<RotaAssignment[]> {
-    const assignments = await db.select().from(rotaAssignments).orderBy(rotaAssignments.startDate);
-    return assignments;
+    return await db.select().from(rotaAssignments);
   }
 
   async getRotaAssignmentById(id: number): Promise<RotaAssignment | undefined> {
@@ -88,17 +87,10 @@ export class DatabaseStorage implements IStorage {
 
   async getCurrentAssignment(): Promise<RotaAssignment | undefined> {
     const today = new Date().toISOString().split('T')[0];
-    const [assignment] = await db
-      .select()
-      .from(rotaAssignments)
-      .where(eq(rotaAssignments.startDate, today))
-      .limit(1);
-    
-    if (assignment) return assignment;
-    
-    // If no exact match, find assignment that spans today
     const assignments = await db.select().from(rotaAssignments);
-    return assignments.find(a => a.startDate <= today && a.endDate >= today);
+    return assignments.find(assignment => 
+      assignment.startDate <= today && assignment.endDate >= today
+    );
   }
 
   async getUpcomingAssignments(): Promise<RotaAssignment[]> {
@@ -110,10 +102,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRotaAssignment(assignment: InsertRotaAssignment): Promise<RotaAssignment> {
-    const [newAssignment] = await db
-      .insert(rotaAssignments)
-      .values(assignment)
-      .returning();
+    const [newAssignment] = await db.insert(rotaAssignments).values(assignment).returning();
     
     // Create history entries
     if (assignment.usMemberId) {
@@ -150,51 +139,37 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRotaAssignment(id: number): Promise<boolean> {
     try {
-      // First delete related history records
-      await db.delete(rotaHistory).where(eq(rotaHistory.assignmentId, id));
-      
-      // Then delete the assignment
-      const result = await db.delete(rotaAssignments).where(eq(rotaAssignments.id, id));
-      return true; // If no error thrown, deletion was successful
+      await db.delete(rotaAssignments).where(eq(rotaAssignments.id, id));
+      return true;
     } catch (error) {
-      console.error("Error deleting assignment:", error);
+      console.error("Error deleting rota assignment:", error);
       return false;
     }
   }
 
   async getRotaHistory(): Promise<RotaHistory[]> {
-    const history = await db.select().from(rotaHistory);
-    return history;
+    return await db.select().from(rotaHistory);
   }
 
   async getRotaHistoryByMember(memberId: number): Promise<RotaHistory[]> {
-    const history = await db.select().from(rotaHistory).where(eq(rotaHistory.memberId, memberId));
-    return history;
+    return await db.select().from(rotaHistory).where(eq(rotaHistory.memberId, memberId));
   }
 
   async createRotaHistory(history: InsertRotaHistory): Promise<RotaHistory> {
-    const [newHistory] = await db
-      .insert(rotaHistory)
-      .values(history)
-      .returning();
+    const [newHistory] = await db.insert(rotaHistory).values(history).returning();
     return newHistory;
   }
 
   async getHolidays(): Promise<Holiday[]> {
-    const allHolidays = await db.select().from(holidays);
-    return allHolidays;
+    return await db.select().from(holidays);
   }
 
   async getHolidaysByMember(memberId: number): Promise<Holiday[]> {
-    const memberHolidays = await db.select().from(holidays).where(eq(holidays.memberId, memberId));
-    return memberHolidays;
+    return await db.select().from(holidays).where(eq(holidays.memberId, memberId));
   }
 
   async createHoliday(holiday: InsertHoliday): Promise<Holiday> {
-    const [newHoliday] = await db
-      .insert(holidays)
-      .values(holiday)
-      .returning();
+    const [newHoliday] = await db.insert(holidays).values(holiday).returning();
     return newHoliday;
   }
 
@@ -224,14 +199,26 @@ export class DatabaseStorage implements IStorage {
       // Check if member is available
       if (!member.isAvailable) return false;
       
+      const assignmentStart = new Date(startDate);
+      const assignmentEnd = new Date(endDate);
+      
+      // Check if member is unavailable during the period
+      if (member.unavailableStart && member.unavailableEnd) {
+        const memberUnavailableStart = new Date(member.unavailableStart);
+        const memberUnavailableEnd = new Date(member.unavailableEnd);
+        
+        // Check for overlap with unavailable period
+        if (assignmentStart <= memberUnavailableEnd && assignmentEnd >= memberUnavailableStart) {
+          return false;
+        }
+      }
+      
       // Check if member is on holiday during the period
       if (member.holidayStart && member.holidayEnd) {
         const memberHolidayStart = new Date(member.holidayStart);
         const memberHolidayEnd = new Date(member.holidayEnd);
-        const assignmentStart = new Date(startDate);
-        const assignmentEnd = new Date(endDate);
         
-        // Check for overlap
+        // Check for overlap with holiday period
         if (assignmentStart <= memberHolidayEnd && assignmentEnd >= memberHolidayStart) {
           return false;
         }
@@ -252,15 +239,26 @@ export class DatabaseStorage implements IStorage {
     // Check US member
     if (assignment.usMemberId) {
       const usMember = await this.getTeamMemberById(assignment.usMemberId);
-      if (usMember && usMember.holidayStart && usMember.holidayEnd) {
-        const holidayStart = new Date(usMember.holidayStart);
-        const holidayEnd = new Date(usMember.holidayEnd);
+      if (usMember) {
         const assignmentStart = new Date(assignment.startDate);
         const assignmentEnd = new Date(assignment.endDate);
         
-        // Check for overlap
-        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
-          conflictingMembers.push(usMember);
+        // Check unavailability period
+        if (usMember.unavailableStart && usMember.unavailableEnd) {
+          const unavailableStart = new Date(usMember.unavailableStart);
+          const unavailableEnd = new Date(usMember.unavailableEnd);
+          if (assignmentStart <= unavailableEnd && assignmentEnd >= unavailableStart) {
+            conflictingMembers.push(usMember);
+          }
+        }
+        
+        // Check holiday period
+        if (usMember.holidayStart && usMember.holidayEnd) {
+          const holidayStart = new Date(usMember.holidayStart);
+          const holidayEnd = new Date(usMember.holidayEnd);
+          if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+            conflictingMembers.push(usMember);
+          }
         }
       }
     }
@@ -268,15 +266,26 @@ export class DatabaseStorage implements IStorage {
     // Check UK member
     if (assignment.ukMemberId) {
       const ukMember = await this.getTeamMemberById(assignment.ukMemberId);
-      if (ukMember && ukMember.holidayStart && ukMember.holidayEnd) {
-        const holidayStart = new Date(ukMember.holidayStart);
-        const holidayEnd = new Date(ukMember.holidayEnd);
+      if (ukMember) {
         const assignmentStart = new Date(assignment.startDate);
         const assignmentEnd = new Date(assignment.endDate);
         
-        // Check for overlap
-        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
-          conflictingMembers.push(ukMember);
+        // Check unavailability period
+        if (ukMember.unavailableStart && ukMember.unavailableEnd) {
+          const unavailableStart = new Date(ukMember.unavailableStart);
+          const unavailableEnd = new Date(ukMember.unavailableEnd);
+          if (assignmentStart <= unavailableEnd && assignmentEnd >= unavailableStart) {
+            conflictingMembers.push(ukMember);
+          }
+        }
+        
+        // Check holiday period
+        if (ukMember.holidayStart && ukMember.holidayEnd) {
+          const holidayStart = new Date(ukMember.holidayStart);
+          const holidayEnd = new Date(ukMember.holidayEnd);
+          if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+            conflictingMembers.push(ukMember);
+          }
         }
       }
     }
@@ -285,306 +294,6 @@ export class DatabaseStorage implements IStorage {
       hasConflict: conflictingMembers.length > 0,
       conflictingMembers
     };
-  }
-}
-
-export class MemStorage implements IStorage {
-  private teamMembers: Map<number, TeamMember>;
-  private rotaAssignments: Map<number, RotaAssignment>;
-  private rotaHistory: Map<number, RotaHistory>;
-  private holidays: Map<number, Holiday>;
-  private currentTeamMemberId: number;
-  private currentRotaAssignmentId: number;
-  private currentRotaHistoryId: number;
-  private currentHolidayId: number;
-
-  constructor() {
-    this.teamMembers = new Map();
-    this.rotaAssignments = new Map();
-    this.rotaHistory = new Map();
-    this.holidays = new Map();
-    this.currentTeamMemberId = 1;
-    this.currentRotaAssignmentId = 1;
-    this.currentRotaHistoryId = 1;
-    this.currentHolidayId = 1;
-    
-    // Initialize with sample data
-    this.initializeData();
-  }
-
-  private initializeData() {
-    // US Team Members
-    const usMembers: Omit<TeamMember, 'id'>[] = [
-      { name: "Sarah Chen", email: "sarah.chen@company.com", region: "us", role: "senior_developer", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
-      { name: "Mike Rodriguez", email: "mike.rodriguez@company.com", region: "us", role: "developer", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
-      { name: "Alex Kumar", email: "alex.kumar@company.com", region: "us", role: "team_lead", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
-    ];
-
-    // UK Team Members
-    const ukMembers: Omit<TeamMember, 'id'>[] = [
-      { name: "James Wilson", email: "james.wilson@company.com", region: "uk", role: "senior_developer", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
-      { name: "Emma Knight", email: "emma.knight@company.com", region: "uk", role: "developer", isAvailable: true, unavailableStart: null, unavailableEnd: null, holidayStart: null, holidayEnd: null },
-      { name: "David Parker", email: "david.parker@company.com", region: "uk", role: "developer", isAvailable: false, unavailableStart: null, unavailableEnd: null, holidayStart: "2024-12-10", holidayEnd: "2024-12-20" },
-    ];
-
-    [...usMembers, ...ukMembers].forEach(member => {
-      const id = this.currentTeamMemberId++;
-      this.teamMembers.set(id, { ...member, id });
-    });
-
-    // Current assignment - set to current week
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
-
-    const currentAssignment = {
-      startDate: startOfWeek.toISOString().split('T')[0],
-      endDate: endOfWeek.toISOString().split('T')[0],
-      usMemberId: 1, // Sarah Chen
-      ukMemberId: 4, // James Wilson
-      notes: "Regular weekly rotation",
-      isManual: false,
-      createdAt: new Date(),
-    };
-    
-    const assignmentId = this.currentRotaAssignmentId++;
-    this.rotaAssignments.set(assignmentId, { ...currentAssignment, id: assignmentId });
-  }
-
-  async getTeamMembers(): Promise<TeamMember[]> {
-    return Array.from(this.teamMembers.values());
-  }
-
-  async getTeamMemberById(id: number): Promise<TeamMember | undefined> {
-    return this.teamMembers.get(id);
-  }
-
-  async getTeamMembersByRegion(region: string): Promise<TeamMember[]> {
-    return Array.from(this.teamMembers.values()).filter(member => member.region === region);
-  }
-
-  async createTeamMember(member: InsertTeamMember): Promise<TeamMember> {
-    const id = this.currentTeamMemberId++;
-    const newMember: TeamMember = { 
-      ...member, 
-      id,
-      role: member.role || "developer",
-      isAvailable: member.isAvailable ?? true,
-      unavailableStart: member.unavailableStart || null,
-      unavailableEnd: member.unavailableEnd || null,
-      holidayStart: member.holidayStart || null,
-      holidayEnd: member.holidayEnd || null
-    };
-    this.teamMembers.set(id, newMember);
-    return newMember;
-  }
-
-  async updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
-    const member = this.teamMembers.get(id);
-    if (!member) return undefined;
-    
-    const updatedMember = { ...member, ...updates };
-    this.teamMembers.set(id, updatedMember);
-    return updatedMember;
-  }
-
-  async deleteTeamMember(id: number): Promise<boolean> {
-    return this.teamMembers.delete(id);
-  }
-
-  async getRotaAssignments(): Promise<RotaAssignment[]> {
-    return Array.from(this.rotaAssignments.values()).sort((a, b) => 
-      new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-    );
-  }
-
-  async getRotaAssignmentById(id: number): Promise<RotaAssignment | undefined> {
-    return this.rotaAssignments.get(id);
-  }
-
-  async getCurrentAssignment(): Promise<RotaAssignment | undefined> {
-    const today = new Date().toISOString().split('T')[0];
-    return Array.from(this.rotaAssignments.values()).find(assignment => 
-      assignment.startDate <= today && assignment.endDate >= today
-    );
-  }
-
-  async getUpcomingAssignments(): Promise<RotaAssignment[]> {
-    const today = new Date().toISOString().split('T')[0];
-    return Array.from(this.rotaAssignments.values())
-      .filter(assignment => assignment.startDate > today)
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-  }
-
-  async createRotaAssignment(assignment: InsertRotaAssignment): Promise<RotaAssignment> {
-    const id = this.currentRotaAssignmentId++;
-    const newAssignment: RotaAssignment = { 
-      ...assignment, 
-      id,
-      usMemberId: assignment.usMemberId || null,
-      ukMemberId: assignment.ukMemberId || null,
-      notes: assignment.notes || null,
-      isManual: assignment.isManual ?? false,
-      createdAt: new Date()
-    };
-    this.rotaAssignments.set(id, newAssignment);
-    
-    // Create history entries
-    if (assignment.usMemberId) {
-      await this.createRotaHistory({
-        memberId: assignment.usMemberId,
-        assignmentId: id,
-        region: "us",
-        startDate: assignment.startDate,
-        endDate: assignment.endDate
-      });
-    }
-    
-    if (assignment.ukMemberId) {
-      await this.createRotaHistory({
-        memberId: assignment.ukMemberId,
-        assignmentId: id,
-        region: "uk",
-        startDate: assignment.startDate,
-        endDate: assignment.endDate
-      });
-    }
-    
-    return newAssignment;
-  }
-
-  async updateRotaAssignment(id: number, updates: Partial<InsertRotaAssignment>): Promise<RotaAssignment | undefined> {
-    const assignment = this.rotaAssignments.get(id);
-    if (!assignment) return undefined;
-    
-    const updatedAssignment = { ...assignment, ...updates };
-    this.rotaAssignments.set(id, updatedAssignment);
-    return updatedAssignment;
-  }
-
-  async deleteRotaAssignment(id: number): Promise<boolean> {
-    return this.rotaAssignments.delete(id);
-  }
-
-  async getRotaHistory(): Promise<RotaHistory[]> {
-    return Array.from(this.rotaHistory.values());
-  }
-
-  async getRotaHistoryByMember(memberId: number): Promise<RotaHistory[]> {
-    return Array.from(this.rotaHistory.values()).filter(history => history.memberId === memberId);
-  }
-
-  async createRotaHistory(history: InsertRotaHistory): Promise<RotaHistory> {
-    const id = this.currentRotaHistoryId++;
-    const newHistory: RotaHistory = { ...history, id };
-    this.rotaHistory.set(id, newHistory);
-    return newHistory;
-  }
-
-  async getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]> {
-    const regionMembers = await this.getTeamMembersByRegion(region);
-    
-    return regionMembers.filter(member => {
-      // Check if member is available
-      if (!member.isAvailable) return false;
-      
-      // Check if member is on holiday during the period
-      if (member.holidayStart && member.holidayEnd) {
-        const memberHolidayStart = new Date(member.holidayStart);
-        const memberHolidayEnd = new Date(member.holidayEnd);
-        const assignmentStart = new Date(startDate);
-        const assignmentEnd = new Date(endDate);
-        
-        // Check for overlap
-        if (assignmentStart <= memberHolidayEnd && assignmentEnd >= memberHolidayStart) {
-          return false;
-        }
-      }
-      
-      return true;
-    });
-  }
-
-  async getMemberAssignmentCount(memberId: number): Promise<number> {
-    const history = await this.getRotaHistoryByMember(memberId);
-    return history.length;
-  }
-
-  async checkHolidayConflicts(assignment: RotaAssignment): Promise<{hasConflict: boolean, conflictingMembers: TeamMember[]}> {
-    const conflictingMembers: TeamMember[] = [];
-    
-    // Check US member
-    if (assignment.usMemberId) {
-      const usMember = await this.getTeamMemberById(assignment.usMemberId);
-      if (usMember && usMember.holidayStart && usMember.holidayEnd) {
-        const holidayStart = new Date(usMember.holidayStart);
-        const holidayEnd = new Date(usMember.holidayEnd);
-        const assignmentStart = new Date(assignment.startDate);
-        const assignmentEnd = new Date(assignment.endDate);
-        
-        // Check for overlap
-        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
-          conflictingMembers.push(usMember);
-        }
-      }
-    }
-    
-    // Check UK member
-    if (assignment.ukMemberId) {
-      const ukMember = await this.getTeamMemberById(assignment.ukMemberId);
-      if (ukMember && ukMember.holidayStart && ukMember.holidayEnd) {
-        const holidayStart = new Date(ukMember.holidayStart);
-        const holidayEnd = new Date(ukMember.holidayEnd);
-        const assignmentStart = new Date(assignment.startDate);
-        const assignmentEnd = new Date(assignment.endDate);
-        
-        // Check for overlap
-        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
-          conflictingMembers.push(ukMember);
-        }
-      }
-    }
-    
-    return {
-      hasConflict: conflictingMembers.length > 0,
-      conflictingMembers
-    };
-  }
-
-  // Holiday methods for MemStorage
-  async getHolidays(): Promise<Holiday[]> {
-    return Array.from(this.holidays.values());
-  }
-
-  async getHolidaysByMember(memberId: number): Promise<Holiday[]> {
-    return Array.from(this.holidays.values()).filter(h => h.memberId === memberId);
-  }
-
-  async createHoliday(holiday: InsertHoliday): Promise<Holiday> {
-    const id = this.currentHolidayId++;
-    const newHoliday: Holiday = { 
-      ...holiday, 
-      id, 
-      createdAt: new Date(),
-      description: holiday.description ?? null
-    };
-    this.holidays.set(id, newHoliday);
-    return newHoliday;
-  }
-
-  async updateHoliday(id: number, updates: Partial<InsertHoliday>): Promise<Holiday | undefined> {
-    const existing = this.holidays.get(id);
-    if (!existing) return undefined;
-    
-    const updated = { ...existing, ...updates };
-    this.holidays.set(id, updated);
-    return updated;
-  }
-
-  async deleteHoliday(id: number): Promise<boolean> {
-    return this.holidays.delete(id);
   }
 }
 
