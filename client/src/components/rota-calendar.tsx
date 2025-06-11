@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Link, FlagIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Link, FlagIcon, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { QuickAssignModal } from "./quick-assign-modal";
 import type { TeamMember, RotaAssignment } from "@shared/schema";
 
 interface RotaCalendarProps {
@@ -14,6 +15,8 @@ interface RotaCalendarProps {
 
 export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }: RotaCalendarProps) {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
+  const [showQuickAssignModal, setShowQuickAssignModal] = useState(false);
+  const [selectedWeekAssignment, setSelectedWeekAssignment] = useState<any>(null);
   
   // Generate calendar dates for the current week (with offset)
   const today = new Date();
@@ -59,6 +62,17 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
 
   const navigateToCurrentWeek = () => {
     setCurrentWeekOffset(0);
+  };
+
+  const handleWeekClick = () => {
+    setSelectedWeekAssignment(weekAssignment);
+    setShowQuickAssignModal(true);
+  };
+
+  const handleDayClick = (date: Date) => {
+    // For day-level assignments, we still work at week level but focus on the clicked day's week
+    setSelectedWeekAssignment(weekAssignment);
+    setShowQuickAssignModal(true);
   };
 
   const getNameInitials = (name: string) => {
@@ -107,6 +121,12 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                   Today
                 </Button>
               )}
+              {!weekAssignment && (
+                <Button onClick={handleWeekClick} size="sm">
+                  <Wand2 className="w-4 h-4 mr-1" />
+                  Auto-Assign Week
+                </Button>
+              )}
               <Button onClick={onManualAssign} size="sm">
                 <Plus className="w-4 h-4 mr-1" />
                 Manual Assign
@@ -137,15 +157,27 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
               <span className="text-sm font-medium text-slate-700">US</span>
             </div>
             {weekDates.map((date, index) => (
-              <div key={index} className="p-2 bg-green-50 border border-green-200 rounded-lg text-center">
-                <div className="text-xs font-medium text-green-800">
+              <div 
+                key={index} 
+                className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
+                  weekAssignment 
+                    ? "bg-green-50 border-green-200 hover:bg-green-100" 
+                    : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                }`}
+                onClick={() => handleDayClick(date)}
+              >
+                <div className={`text-xs font-medium ${
+                  weekAssignment ? "text-green-800" : "text-slate-600"
+                }`}>
                   {weekAssignment && getWeekUSMember() 
                     ? getNameInitials(getWeekUSMember()!.name)
                     : "TBD"
                   }
                 </div>
-                <div className="text-xs text-green-600">
-                  {weekAssignment ? "Assigned" : "TBD"}
+                <div className={`text-xs ${
+                  weekAssignment ? "text-green-600" : "text-slate-500"
+                }`}>
+                  {weekAssignment ? "Assigned" : "Click to assign"}
                 </div>
               </div>
             ))}
@@ -158,15 +190,27 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
               <span className="text-sm font-medium text-slate-700">UK</span>
             </div>
             {weekDates.map((date, index) => (
-              <div key={index} className="p-2 bg-green-50 border border-green-200 rounded-lg text-center">
-                <div className="text-xs font-medium text-green-800">
+              <div 
+                key={index} 
+                className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
+                  weekAssignment 
+                    ? "bg-green-50 border-green-200 hover:bg-green-100" 
+                    : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                }`}
+                onClick={() => handleDayClick(date)}
+              >
+                <div className={`text-xs font-medium ${
+                  weekAssignment ? "text-green-800" : "text-slate-600"
+                }`}>
                   {weekAssignment && getWeekUKMember() 
                     ? getNameInitials(getWeekUKMember()!.name)
                     : "TBD"
                   }
                 </div>
-                <div className="text-xs text-green-600">
-                  {weekAssignment ? "Assigned" : "TBD"}
+                <div className={`text-xs ${
+                  weekAssignment ? "text-green-600" : "text-slate-500"
+                }`}>
+                  {weekAssignment ? "Assigned" : "Click to assign"}
                 </div>
               </div>
             ))}
@@ -187,6 +231,16 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           </div>
         </CardContent>
       </Card>
+
+      {/* Quick Assign Modal */}
+      <QuickAssignModal
+        isOpen={showQuickAssignModal}
+        onClose={() => setShowQuickAssignModal(false)}
+        teamMembers={teamMembers}
+        weekStartDate={weekStartStr}
+        weekEndDate={weekEndStr}
+        existingAssignment={selectedWeekAssignment}
+      />
     </div>
   );
 }
