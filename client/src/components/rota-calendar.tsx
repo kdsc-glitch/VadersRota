@@ -75,13 +75,23 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
 
   const handleDayClick = (date: Date) => {
     console.log('Day clicked:', date);
-    // Check if there's a specific assignment for this day
     const dateStr = date.toISOString().split('T')[0];
     console.log('Date string:', dateStr);
-    const dayAssignment = allAssignments.find(assignment => 
+    
+    // Check for day-specific assignment first
+    let dayAssignment = allAssignments.find(assignment => 
       assignment.startDate === dateStr && assignment.endDate === dateStr
     );
-    console.log('Day assignment found:', dayAssignment);
+    
+    // If no day-specific assignment, check for week-level assignment covering this day
+    if (!dayAssignment) {
+      dayAssignment = allAssignments.find(assignment => 
+        dateStr >= assignment.startDate && dateStr <= assignment.endDate &&
+        assignment.startDate !== assignment.endDate // Ensure it's a week assignment
+      );
+    }
+    
+    console.log('Assignment found:', dayAssignment);
     
     setSelectedDate(dateStr);
     setSelectedDayAssignment(dayAssignment || null);
