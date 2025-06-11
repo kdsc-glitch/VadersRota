@@ -154,17 +154,27 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       setLoadingStage("Assignment complete!");
       setTimeout(() => setLoadingStage(""), 1000);
       
-      // Handle partial assignment success
+      // Handle assignment success - distinguish between full and partial
       if (data.assignments && data.skippedDays) {
-        const assignedDays = data.assignments.map((a: any) => 
-          `${new Date(a.date).toLocaleDateString()}: ${a.usMembers} (US), ${a.ukMember} (UK)`
-        ).join('\n');
-        
-        const skippedDays = data.skippedDays.map((s: any) => 
-          `${new Date(s.date).toLocaleDateString()}: ${s.reason}`
-        ).join('\n');
-        
-        alert(`${data.message}\n\nAssigned days:\n${assignedDays}\n\nSkipped days:\n${skippedDays}`);
+        if (data.skippedDays.length === 0) {
+          // Full assignment - all days successfully assigned
+          const assignedDays = data.assignments.map((a: any) => 
+            `${new Date(a.date).toLocaleDateString()}: ${a.usMembers} (US), ${a.ukMember} (UK)`
+          ).join('\n');
+          
+          alert(`Week Successfully Assigned!\n\nAll ${data.assignments.length} days have been assigned:\n${assignedDays}`);
+        } else {
+          // Partial assignment - some days were skipped
+          const assignedDays = data.assignments.map((a: any) => 
+            `${new Date(a.date).toLocaleDateString()}: ${a.usMembers} (US), ${a.ukMember} (UK)`
+          ).join('\n');
+          
+          const skippedDays = data.skippedDays.map((s: any) => 
+            `${new Date(s.date).toLocaleDateString()}: ${s.reason}`
+          ).join('\n');
+          
+          alert(`${data.message}\n\nAssigned days:\n${assignedDays}\n\nSkipped days:\n${skippedDays}`);
+        }
       }
       
       setRefreshKey(prev => prev + 1);

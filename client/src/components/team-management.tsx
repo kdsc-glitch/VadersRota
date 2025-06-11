@@ -49,12 +49,21 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
       
-      // Handle partial assignment success
+      // Handle assignment success - distinguish between full and partial
       if (data.assignments && data.skippedDays) {
-        toast({
-          title: "Partial Assignment Complete",
-          description: `${data.assignments.length} days assigned, ${data.skippedDays.length} days skipped due to conflicts`,
-        });
+        if (data.skippedDays.length === 0) {
+          // Full assignment - all days successfully assigned
+          toast({
+            title: "Week Successfully Assigned",
+            description: `All ${data.assignments.length} days have been assigned for next week's support rotation`,
+          });
+        } else {
+          // Partial assignment - some days were skipped
+          toast({
+            title: "Partial Assignment Complete",
+            description: `${data.assignments.length} days assigned, ${data.skippedDays.length} days skipped due to conflicts`,
+          });
+        }
       } else {
         toast({
           title: "Auto-Assignment Complete",
