@@ -123,6 +123,26 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     setShowQuickAssignModal(true);
   };
 
+  const autoAssignMutation = useMutation({
+    mutationFn: async () => {
+      const weekStartStr = startOfWeek.toISOString().split('T')[0];
+      const weekEndStr = weekDates[6].toISOString().split('T')[0];
+      
+      return apiRequest("POST", "/api/rota-assignments/auto-assign", {
+        startDate: weekStartStr,
+        endDate: weekEndStr,
+      });
+    },
+    onSuccess: () => {
+      setRefreshKey(prev => prev + 1);
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+    },
+    onError: (error: any) => {
+      console.error('Auto-assign failed:', error);
+    },
+  });
+
   const clearWeekMutation = useMutation({
     mutationFn: async () => {
       const weekStartStr = startOfWeek.toISOString().split('T')[0];
@@ -263,9 +283,13 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                 </Button>
               )}
               {!weekAssignment && (
-                <Button onClick={handleWeekClick} size="sm">
+                <Button 
+                  onClick={() => autoAssignMutation.mutate()} 
+                  size="sm"
+                  disabled={autoAssignMutation.isPending}
+                >
                   <Wand2 className="w-4 h-4 mr-1" />
-                  Auto-Assign Week
+                  {autoAssignMutation.isPending ? "Auto-Assigning..." : "Auto-Assign Week"}
                 </Button>
               )}
               {weekAssignment && (
