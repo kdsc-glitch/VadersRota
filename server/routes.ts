@@ -219,18 +219,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Get available members for each region
-      const usMembers = await storage.getAvailableMembers("us", assignmentStartDate, assignmentEndDate);
-      const ukMembers = await storage.getAvailableMembers("uk", assignmentStartDate, assignmentEndDate);
-
-
-
-      if (usMembers.length === 0 || ukMembers.length === 0) {
-        // Try partial assignment - check each day individually
-        const startDate = new Date(assignmentStartDate);
-        const endDate = new Date(assignmentEndDate);
-        const assignments = [];
-        const skippedDays = [];
+      // Always try partial assignment for better coverage
+      console.log('Starting partial assignment process...');
+      
+      // Try partial assignment - check each day individually
+      const periodStart = new Date(assignmentStartDate);
+      const periodEnd = new Date(assignmentEndDate);
+      const assignments = [];
+      const skippedDays = [];
         
         for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
           const dateStr = currentDate.toISOString().split('T')[0];
@@ -409,6 +405,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             skippedDays
           });
         }
+        
+        // This return prevents the full week assignment logic from running
+        return;
       }
 
       // Enhanced fair rotation: consider both assignment count and time since last assignment
