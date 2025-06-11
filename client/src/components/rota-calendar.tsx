@@ -205,7 +205,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const clearWeekMutation = useMutation({
     mutationFn: async () => {
       const weekStartStr = startOfWeek.toISOString().split('T')[0];
-      const weekEndStr = weekDates[6].toISOString().split('T')[0];
+      const weekEndStr = weekDates[weekDates.length - 1].toISOString().split('T')[0];
       
       // Find all assignments that fall within this week
       const weekAssignments = allAssignments.filter(assignment => {
@@ -435,7 +435,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           )}
           
           {/* Calendar Header */}
-          <div className="grid grid-cols-8 gap-4 mb-4">
+          <div className="grid grid-cols-6 gap-4 mb-4">
             <div className="text-sm font-medium text-slate-600">Week</div>
             {weekDates.map((date, index) => (
               <div key={index} className="text-sm font-medium text-slate-600 text-center">
@@ -445,7 +445,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           </div>
 
           {/* US Region Row */}
-          <div className="grid grid-cols-8 gap-4 mb-3">
+          <div className="grid grid-cols-6 gap-4 mb-3">
             <div className="flex items-center space-x-2">
               <FlagIcon className="text-blue-600 w-4 h-4" />
               <span className="text-sm font-medium text-slate-700">US</span>
@@ -496,7 +496,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           </div>
 
           {/* UK Region Row */}
-          <div className="grid grid-cols-8 gap-4 mb-3">
+          <div className="grid grid-cols-6 gap-4 mb-3">
             <div className="flex items-center space-x-2">
               <FlagIcon className="text-blue-600 w-4 h-4" />
               <span className="text-sm font-medium text-slate-700">UK</span>
