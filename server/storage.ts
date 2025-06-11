@@ -28,6 +28,7 @@ export interface IStorage {
   // Utility methods
   getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]>;
   getMemberAssignmentCount(memberId: number): Promise<number>;
+  checkHolidayConflicts(assignment: RotaAssignment): Promise<{hasConflict: boolean, conflictingMembers: TeamMember[]}>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -190,6 +191,47 @@ export class DatabaseStorage implements IStorage {
   async getMemberAssignmentCount(memberId: number): Promise<number> {
     const history = await this.getRotaHistoryByMember(memberId);
     return history.length;
+  }
+
+  async checkHolidayConflicts(assignment: RotaAssignment): Promise<{hasConflict: boolean, conflictingMembers: TeamMember[]}> {
+    const conflictingMembers: TeamMember[] = [];
+    
+    // Check US member
+    if (assignment.usMemberId) {
+      const usMember = await this.getTeamMemberById(assignment.usMemberId);
+      if (usMember && usMember.holidayStart && usMember.holidayEnd) {
+        const holidayStart = new Date(usMember.holidayStart);
+        const holidayEnd = new Date(usMember.holidayEnd);
+        const assignmentStart = new Date(assignment.startDate);
+        const assignmentEnd = new Date(assignment.endDate);
+        
+        // Check for overlap
+        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+          conflictingMembers.push(usMember);
+        }
+      }
+    }
+    
+    // Check UK member
+    if (assignment.ukMemberId) {
+      const ukMember = await this.getTeamMemberById(assignment.ukMemberId);
+      if (ukMember && ukMember.holidayStart && ukMember.holidayEnd) {
+        const holidayStart = new Date(ukMember.holidayStart);
+        const holidayEnd = new Date(ukMember.holidayEnd);
+        const assignmentStart = new Date(assignment.startDate);
+        const assignmentEnd = new Date(assignment.endDate);
+        
+        // Check for overlap
+        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+          conflictingMembers.push(ukMember);
+        }
+      }
+    }
+    
+    return {
+      hasConflict: conflictingMembers.length > 0,
+      conflictingMembers
+    };
   }
 }
 
@@ -410,6 +452,47 @@ export class MemStorage implements IStorage {
   async getMemberAssignmentCount(memberId: number): Promise<number> {
     const history = await this.getRotaHistoryByMember(memberId);
     return history.length;
+  }
+
+  async checkHolidayConflicts(assignment: RotaAssignment): Promise<{hasConflict: boolean, conflictingMembers: TeamMember[]}> {
+    const conflictingMembers: TeamMember[] = [];
+    
+    // Check US member
+    if (assignment.usMemberId) {
+      const usMember = await this.getTeamMemberById(assignment.usMemberId);
+      if (usMember && usMember.holidayStart && usMember.holidayEnd) {
+        const holidayStart = new Date(usMember.holidayStart);
+        const holidayEnd = new Date(usMember.holidayEnd);
+        const assignmentStart = new Date(assignment.startDate);
+        const assignmentEnd = new Date(assignment.endDate);
+        
+        // Check for overlap
+        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+          conflictingMembers.push(usMember);
+        }
+      }
+    }
+    
+    // Check UK member
+    if (assignment.ukMemberId) {
+      const ukMember = await this.getTeamMemberById(assignment.ukMemberId);
+      if (ukMember && ukMember.holidayStart && ukMember.holidayEnd) {
+        const holidayStart = new Date(ukMember.holidayStart);
+        const holidayEnd = new Date(ukMember.holidayEnd);
+        const assignmentStart = new Date(assignment.startDate);
+        const assignmentEnd = new Date(assignment.endDate);
+        
+        // Check for overlap
+        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+          conflictingMembers.push(ukMember);
+        }
+      }
+    }
+    
+    return {
+      hasConflict: conflictingMembers.length > 0,
+      conflictingMembers
+    };
   }
 }
 
