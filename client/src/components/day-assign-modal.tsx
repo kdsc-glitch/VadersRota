@@ -14,8 +14,8 @@ import type { TeamMember } from "@shared/schema";
 
 const dayAssignSchema = z.object({
   date: z.string().min(1, "Date is required"),
-  usMemberId: z.number().min(1, "Please select a US team member"),
-  ukMemberId: z.number().min(1, "Please select a UK team member"),
+  usMemberId: z.coerce.number().min(1, "Please select a US team member"),
+  ukMemberId: z.coerce.number().min(1, "Please select a UK team member"),
 });
 
 type DayAssignFormData = z.infer<typeof dayAssignSchema>;
@@ -91,6 +91,8 @@ export function DayAssignModal({
   });
 
   const onSubmit = (data: DayAssignFormData) => {
+    console.log('Day assignment form data:', data);
+    console.log('Form errors:', form.formState.errors);
     assignMutation.mutate(data);
   };
 
@@ -120,7 +122,7 @@ export function DayAssignModal({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>US Support</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value > 0 ? field.value.toString() : ""}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select US team member" />
@@ -150,7 +152,7 @@ export function DayAssignModal({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>UK Support</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value > 0 ? field.value.toString() : ""}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select UK team member" />
