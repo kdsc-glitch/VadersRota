@@ -143,6 +143,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRotaAssignment(id: number): Promise<boolean> {
     try {
+      // First delete related history records
+      await db.delete(rotaHistory).where(eq(rotaHistory.assignmentId, id));
+      
+      // Then delete the assignment
       const result = await db.delete(rotaAssignments).where(eq(rotaAssignments.id, id));
       return true; // If no error thrown, deletion was successful
     } catch (error) {
