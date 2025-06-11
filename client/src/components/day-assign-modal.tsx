@@ -35,6 +35,7 @@ export function DayAssignModal({
   selectedDate,
   existingAssignment 
 }: DayAssignModalProps) {
+  console.log('DayAssignModal render - isOpen:', isOpen, 'selectedDate:', selectedDate);
   const { toast } = useToast();
   
   const form = useForm<DayAssignFormData>({

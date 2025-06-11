@@ -74,15 +74,19 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   };
 
   const handleDayClick = (date: Date) => {
+    console.log('Day clicked:', date);
     // Check if there's a specific assignment for this day
     const dateStr = date.toISOString().split('T')[0];
+    console.log('Date string:', dateStr);
     const dayAssignment = allAssignments.find(assignment => 
       assignment.startDate === dateStr && assignment.endDate === dateStr
     );
+    console.log('Day assignment found:', dayAssignment);
     
     setSelectedDate(dateStr);
     setSelectedDayAssignment(dayAssignment || null);
     setShowDayAssignModal(true);
+    console.log('Modal should open now');
   };
 
   const getNameInitials = (name: string) => {
