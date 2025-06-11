@@ -1,4 +1,5 @@
 
+import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,16 +42,20 @@ export function DayAssignModal({
   const form = useForm<DayAssignFormData>({
     resolver: zodResolver(dayAssignSchema),
     defaultValues: {
-      date: selectedDate || "",
-      usMemberId: existingAssignment?.usMemberId || 0,
-      ukMemberId: existingAssignment?.ukMemberId || 0,
-    },
-    values: {
-      date: selectedDate || "",
-      usMemberId: existingAssignment?.usMemberId || 0,
-      ukMemberId: existingAssignment?.ukMemberId || 0,
+      date: "",
+      usMemberId: 0,
+      ukMemberId: 0,
     },
   });
+
+  // Update form values when props change
+  useEffect(() => {
+    if (selectedDate) {
+      form.setValue('date', selectedDate);
+      form.setValue('usMemberId', existingAssignment?.usMemberId || 0);
+      form.setValue('ukMemberId', existingAssignment?.ukMemberId || 0);
+    }
+  }, [selectedDate, existingAssignment, form]);
 
   const usMembers = teamMembers.filter(m => m.region === "us" && m.isAvailable);
   const ukMembers = teamMembers.filter(m => m.region === "uk" && m.isAvailable);
