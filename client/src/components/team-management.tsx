@@ -6,7 +6,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, FlagIcon, Edit, Wand2, CalendarX, TrendingUp, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { HolidayManagementModal } from "./holiday-management-modal";
+import { HolidayCalendarModal } from "./holiday-calendar-modal";
 import { FairnessReportModal } from "./fairness-report-modal";
 import { SimpleEditMemberModal } from "./simple-edit-member-modal";
 import type { TeamMember } from "@shared/schema";
@@ -282,7 +282,7 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
       </Card>
 
       {/* Modals */}
-      <HolidayManagementModal 
+      <HolidayCalendarModal 
         isOpen={showHolidayModal}
         onClose={() => setShowHolidayModal(false)}
       />

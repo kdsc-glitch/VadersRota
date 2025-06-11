@@ -11,7 +11,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { CalendarX, User } from "lucide-react";
+import { CalendarX, User, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { useState } from "react";
 import type { TeamMember } from "@shared/schema";
 
 const holidaySchema = z.object({
@@ -29,6 +30,8 @@ interface HolidayManagementModalProps {
 
 export function HolidayManagementModal({ isOpen, onClose }: HolidayManagementModalProps) {
   const { toast } = useToast();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showAddForm, setShowAddForm] = useState(false);
   
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({
     queryKey: ["/api/team-members"],
@@ -96,6 +99,57 @@ export function HolidayManagementModal({ isOpen, onClose }: HolidayManagementMod
     updateHolidayMutation.mutate(data);
   };
 
+  // Calendar helper functions
+  const getMonthName = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const getCalendarDays = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
+    
+    const days = [];
+    const current = new Date(startDate);
+    
+    // Generate 6 weeks (42 days) to cover all possible calendar layouts
+    for (let i = 0; i < 42; i++) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return days;
+  };
+
+  const isDateInHoliday = (date: Date, member: TeamMember) => {
+    if (!member.holidayStart || !member.holidayEnd) return false;
+    
+    const dateStr = date.toISOString().split('T')[0];
+    const holidayStart = new Date(member.holidayStart);
+    const holidayEnd = new Date(member.holidayEnd);
+    
+    return date >= holidayStart && date <= holidayEnd;
+  };
+
+  const getMembersOnHolidayForDate = (date: Date) => {
+    return teamMembers.filter(member => isDateInHoliday(date, member));
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const calendarDays = getCalendarDays(currentDate);
   const membersOnHoliday = teamMembers.filter(m => !m.isAvailable && m.holidayStart && m.holidayEnd);
 
   return (
