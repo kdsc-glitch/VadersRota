@@ -34,6 +34,15 @@ export const rotaHistory = pgTable("rota_history", {
   endDate: date("end_date").notNull(),
 });
 
+export const holidays = pgTable("holidays", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").notNull().references(() => teamMembers.id),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
   id: true,
 });
@@ -47,9 +56,16 @@ export const insertRotaHistorySchema = createInsertSchema(rotaHistory).omit({
   id: true,
 });
 
+export const insertHolidaySchema = createInsertSchema(holidays).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
 export type RotaAssignment = typeof rotaAssignments.$inferSelect;
 export type InsertRotaAssignment = z.infer<typeof insertRotaAssignmentSchema>;
 export type RotaHistory = typeof rotaHistory.$inferSelect;
 export type InsertRotaHistory = z.infer<typeof insertRotaHistorySchema>;
+export type Holiday = typeof holidays.$inferSelect;
+export type InsertHoliday = z.infer<typeof insertHolidaySchema>;

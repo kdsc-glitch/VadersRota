@@ -1,4 +1,4 @@
-import { teamMembers, rotaAssignments, rotaHistory, type TeamMember, type InsertTeamMember, type RotaAssignment, type InsertRotaAssignment, type RotaHistory, type InsertRotaHistory } from "@shared/schema";
+import { teamMembers, rotaAssignments, rotaHistory, holidays, type TeamMember, type InsertTeamMember, type RotaAssignment, type InsertRotaAssignment, type RotaHistory, type InsertRotaHistory, type Holiday, type InsertHoliday } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -24,6 +24,13 @@ export interface IStorage {
   getRotaHistory(): Promise<RotaHistory[]>;
   getRotaHistoryByMember(memberId: number): Promise<RotaHistory[]>;
   createRotaHistory(history: InsertRotaHistory): Promise<RotaHistory>;
+
+  // Holidays
+  getHolidays(): Promise<Holiday[]>;
+  getHolidaysByMember(memberId: number): Promise<Holiday[]>;
+  createHoliday(holiday: InsertHoliday): Promise<Holiday>;
+  updateHoliday(id: number, updates: Partial<InsertHoliday>): Promise<Holiday | undefined>;
+  deleteHoliday(id: number): Promise<boolean>;
 
   // Utility methods
   getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]>;
@@ -171,6 +178,43 @@ export class DatabaseStorage implements IStorage {
       .values(history)
       .returning();
     return newHistory;
+  }
+
+  async getHolidays(): Promise<Holiday[]> {
+    const allHolidays = await db.select().from(holidays);
+    return allHolidays;
+  }
+
+  async getHolidaysByMember(memberId: number): Promise<Holiday[]> {
+    const memberHolidays = await db.select().from(holidays).where(eq(holidays.memberId, memberId));
+    return memberHolidays;
+  }
+
+  async createHoliday(holiday: InsertHoliday): Promise<Holiday> {
+    const [newHoliday] = await db
+      .insert(holidays)
+      .values(holiday)
+      .returning();
+    return newHoliday;
+  }
+
+  async updateHoliday(id: number, updates: Partial<InsertHoliday>): Promise<Holiday | undefined> {
+    const [updatedHoliday] = await db
+      .update(holidays)
+      .set(updates)
+      .where(eq(holidays.id, id))
+      .returning();
+    return updatedHoliday || undefined;
+  }
+
+  async deleteHoliday(id: number): Promise<boolean> {
+    try {
+      await db.delete(holidays).where(eq(holidays.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting holiday:", error);
+      return false;
+    }
   }
 
   async getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]> {
