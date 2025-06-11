@@ -23,6 +23,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedDayAssignment, setSelectedDayAssignment] = useState<any>(null);
   const [holidayConflicts, setHolidayConflicts] = useState<Map<string, any>>(new Map());
+  const [refreshKey, setRefreshKey] = useState(0);
   
   // Generate calendar dates for the current week (with offset)
   const today = new Date();
@@ -37,7 +38,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
 
   // Get assignments for this week
   const { data: allAssignments = [], refetch: refetchAssignments } = useQuery<RotaAssignment[]>({
-    queryKey: ["/api/rota-assignments"],
+    queryKey: ["/api/rota-assignments", refreshKey],
   });
 
   // Check for holiday conflicts whenever assignments change
@@ -139,24 +140,25 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       });
       
       // Delete all assignments for this week
-      const deletePromises = weekAssignments.map(async (assignment) => {
-        await apiRequest("DELETE", `/api/rota-assignments/${assignment.id}`);
-      });
-      
-      await Promise.all(deletePromises);
+      for (const assignment of weekAssignments) {
+        try {
+          await apiRequest("DELETE", `/api/rota-assignments/${assignment.id}`);
+          console.log('Successfully deleted assignment:', assignment.id);
+        } catch (error) {
+          console.error('Failed to delete assignment:', assignment.id, error);
+          throw error;
+        }
+      }
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       console.log('Clear week completed successfully');
       
-      // Clear all cached assignment data immediately
-      queryClient.removeQueries({ queryKey: ["/api/rota-assignments"] });
-      queryClient.removeQueries({ queryKey: ["/api/rota-assignments/current"] });
-      queryClient.removeQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      // Force immediate UI refresh by changing the query key
+      setRefreshKey(prev => prev + 1);
       
-      // Force fresh fetch of all assignment data
-      await refetchAssignments();
-      await queryClient.refetchQueries({ queryKey: ["/api/rota-assignments/current"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      // Also invalidate other related queries
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
     },
     onError: (error) => {
       console.error('Clear week failed:', error);
