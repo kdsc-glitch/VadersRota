@@ -127,8 +127,6 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       const weekStartStr = startOfWeek.toISOString().split('T')[0];
       const weekEndStr = weekDates[6].toISOString().split('T')[0];
       
-      console.log('Clearing week from:', weekStartStr, 'to:', weekEndStr);
-      
       // Find all assignments that fall within this week
       const weekAssignments = allAssignments.filter(assignment => {
         const assignmentStart = new Date(assignment.startDate);
@@ -140,27 +138,24 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
         return assignmentStart <= weekEnd && assignmentEnd >= weekStart;
       });
       
-      console.log('Found assignments to delete:', weekAssignments);
-      
       // Delete all assignments for this week
       const deletePromises = weekAssignments.map(async (assignment) => {
-        try {
-          console.log('Deleting assignment:', assignment.id);
-          await apiRequest("DELETE", `/api/rota-assignments/${assignment.id}`);
-          console.log('Successfully deleted assignment:', assignment.id);
-        } catch (error) {
-          console.error('Failed to delete assignment:', assignment.id, error);
-          throw error;
-        }
+        await apiRequest("DELETE", `/api/rota-assignments/${assignment.id}`);
       });
       
       await Promise.all(deletePromises);
     },
     onSuccess: () => {
       console.log('Clear week completed successfully');
+      // Force refetch all assignment-related queries
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      
+      // Also refetch immediately to ensure UI updates
+      queryClient.refetchQueries({ queryKey: ["/api/rota-assignments"] });
+      queryClient.refetchQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.refetchQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
     },
     onError: (error) => {
       console.error('Clear week failed:', error);
