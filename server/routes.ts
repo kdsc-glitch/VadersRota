@@ -1,194 +1,171 @@
+import type { Request, Response, NextFunction } from "express";
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
+import { createServer } from "http";
 import { storage } from "./storage";
-import { insertTeamMemberSchema, insertRotaAssignmentSchema, insertHolidaySchema } from "@shared/schema";
-import { z } from "zod";
+import { insertRotaAssignmentSchema, insertHolidaySchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Team Members routes
+  // Get all team members
   app.get("/api/team-members", async (req, res) => {
     try {
       const members = await storage.getTeamMembers();
       res.json(members);
     } catch (error) {
+      console.error('Error fetching team members:', error);
       res.status(500).json({ message: "Failed to fetch team members" });
     }
   });
 
-  app.get("/api/team-members/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const member = await storage.getTeamMemberById(id);
-      if (!member) {
-        return res.status(404).json({ message: "Team member not found" });
-      }
-      res.json(member);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch team member" });
-    }
-  });
-
-  app.get("/api/team-members/region/:region", async (req, res) => {
-    try {
-      const region = req.params.region;
-      const members = await storage.getTeamMembersByRegion(region);
-      res.json(members);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch team members by region" });
-    }
-  });
-
+  // Create team member
   app.post("/api/team-members", async (req, res) => {
     try {
-      const validatedData = insertTeamMemberSchema.parse(req.body);
-      const member = await storage.createTeamMember(validatedData);
+      const member = await storage.createTeamMember(req.body);
       res.status(201).json(member);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
-      }
+      console.error('Error creating team member:', error);
       res.status(500).json({ message: "Failed to create team member" });
     }
   });
 
+  // Update team member
   app.patch("/api/team-members/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updates = insertTeamMemberSchema.partial().parse(req.body);
-      const member = await storage.updateTeamMember(id, updates);
-      if (!member) {
-        return res.status(404).json({ message: "Team member not found" });
+      const member = await storage.updateTeamMember(id, req.body);
+      if (member) {
+        res.json(member);
+      } else {
+        res.status(404).json({ message: "Team member not found" });
       }
-      res.json(member);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
-      }
+      console.error('Error updating team member:', error);
       res.status(500).json({ message: "Failed to update team member" });
     }
   });
 
-  app.put("/api/team-members/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updates = insertTeamMemberSchema.partial().parse(req.body);
-      const member = await storage.updateTeamMember(id, updates);
-      if (!member) {
-        return res.status(404).json({ message: "Team member not found" });
-      }
-      res.json(member);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update team member" });
-    }
-  });
-
+  // Delete team member
   app.delete("/api/team-members/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const deleted = await storage.deleteTeamMember(id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Team member not found" });
+      const success = await storage.deleteTeamMember(id);
+      if (success) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Team member not found" });
       }
-      res.status(204).send();
     } catch (error) {
+      console.error('Error deleting team member:', error);
       res.status(500).json({ message: "Failed to delete team member" });
     }
   });
 
-  // Rota Assignments routes
+  // Get all rota assignments
   app.get("/api/rota-assignments", async (req, res) => {
     try {
       const assignments = await storage.getRotaAssignments();
       res.json(assignments);
     } catch (error) {
+      console.error('Error fetching rota assignments:', error);
       res.status(500).json({ message: "Failed to fetch rota assignments" });
     }
   });
 
+  // Create rota assignment
+  app.post("/api/rota-assignments", async (req, res) => {
+    try {
+      const assignment = await storage.createRotaAssignment(req.body);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error('Error creating rota assignment:', error);
+      res.status(500).json({ message: "Failed to create rota assignment" });
+    }
+  });
+
+  // Update rota assignment
+  app.patch("/api/rota-assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const assignment = await storage.updateRotaAssignment(id, req.body);
+      if (assignment) {
+        res.json(assignment);
+      } else {
+        res.status(404).json({ message: "Rota assignment not found" });
+      }
+    } catch (error) {
+      console.error('Error updating rota assignment:', error);
+      res.status(500).json({ message: "Failed to update rota assignment" });
+    }
+  });
+
+  // Delete rota assignment
+  app.delete("/api/rota-assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteRotaAssignment(id);
+      if (success) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Rota assignment not found" });
+      }
+    } catch (error) {
+      console.error('Error deleting rota assignment:', error);
+      res.status(500).json({ message: "Failed to delete rota assignment" });
+    }
+  });
+
+  // Get current assignment
   app.get("/api/rota-assignments/current", async (req, res) => {
     try {
       const assignment = await storage.getCurrentAssignment();
-      if (!assignment) {
-        return res.status(404).json({ message: "No current assignment found" });
+      if (assignment) {
+        res.json(assignment);
+      } else {
+        res.status(404).json({ message: "No current assignment found" });
       }
-      res.json(assignment);
     } catch (error) {
+      console.error('Error fetching current assignment:', error);
       res.status(500).json({ message: "Failed to fetch current assignment" });
     }
   });
 
+  // Get upcoming assignments
   app.get("/api/rota-assignments/upcoming", async (req, res) => {
     try {
       const assignments = await storage.getUpcomingAssignments();
       res.json(assignments);
     } catch (error) {
+      console.error('Error fetching upcoming assignments:', error);
       res.status(500).json({ message: "Failed to fetch upcoming assignments" });
     }
   });
 
-  app.post("/api/rota-assignments", async (req, res) => {
+  // Check holiday conflicts for an assignment
+  app.post("/api/rota-assignments/check-conflicts", async (req, res) => {
     try {
-      const validatedData = insertRotaAssignmentSchema.parse(req.body);
-      const assignment = await storage.createRotaAssignment(validatedData);
-      res.status(201).json(assignment);
+      const result = await storage.checkHolidayConflicts(req.body);
+      res.json(result);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create rota assignment" });
+      console.error('Error checking holiday conflicts:', error);
+      res.status(500).json({ message: "Failed to check holiday conflicts" });
     }
   });
 
-  app.patch("/api/rota-assignments/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updates = insertRotaAssignmentSchema.partial().parse(req.body);
-      const assignment = await storage.updateRotaAssignment(id, updates);
-      if (!assignment) {
-        return res.status(404).json({ message: "Rota assignment not found" });
-      }
-      res.json(assignment);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update rota assignment" });
-    }
-  });
-
-  app.delete("/api/rota-assignments/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteRotaAssignment(id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Rota assignment not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete rota assignment" });
-    }
-  });
-
-  // Auto-assign for any week
+  // Auto-assign with partial assignment capability
   app.post("/api/rota-assignments/auto-assign", async (req, res) => {
     try {
       const { startDate, endDate } = req.body;
       
-      // If no dates provided, use next week
       let assignmentStartDate = startDate;
       let assignmentEndDate = endDate;
       
       if (!startDate || !endDate) {
-        // Find the next available week without conflicts
         const today = new Date();
         let attemptDate = new Date(today);
         let weekFound = false;
         let attempts = 0;
         
-        while (!weekFound && attempts < 8) { // Check up to 8 weeks ahead
+        while (!weekFound && attempts < 8) {
           const nextMonday = new Date(attemptDate);
           nextMonday.setDate(attemptDate.getDate() + (8 - attemptDate.getDay()) % 7);
           const nextSunday = new Date(nextMonday);
@@ -197,7 +174,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const testStartDate = nextMonday.toISOString().split('T')[0];
           const testEndDate = nextSunday.toISOString().split('T')[0];
           
-          // Check if this week has available members
           const testUSMembers = await storage.getAvailableMembers("us", testStartDate, testEndDate);
           const testUKMembers = await storage.getAvailableMembers("uk", testStartDate, testEndDate);
           
@@ -206,7 +182,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             assignmentEndDate = testEndDate;
             weekFound = true;
           } else {
-            // Try next week
             attemptDate.setDate(attemptDate.getDate() + 7);
             attempts++;
           }
@@ -219,354 +194,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Always try partial assignment for better coverage
       console.log('Starting partial assignment process...');
       
-      // Try partial assignment - check each day individually
       const periodStart = new Date(assignmentStartDate);
       const periodEnd = new Date(assignmentEndDate);
       const assignments = [];
       const skippedDays = [];
+      
+      for (let currentDate = new Date(periodStart); currentDate <= periodEnd; currentDate.setDate(currentDate.getDate() + 1)) {
+        const dateStr = currentDate.toISOString().split('T')[0];
         
-        for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
-          const dateStr = currentDate.toISOString().split('T')[0];
+        const dayUSMembers = await storage.getAvailableMembers("us", dateStr, dateStr);
+        const dayUKMembers = await storage.getAvailableMembers("uk", dateStr, dateStr);
+        
+        if (dayUSMembers.length > 0 && dayUKMembers.length > 0) {
+          let selectedUSMember = dayUSMembers[0];
+          let selectedUKMember = dayUKMembers[0];
+          let bestUSScore = -1;
+          let bestUKScore = -1;
           
-          // Check availability for this specific day
-          const dayUSMembers = await storage.getAvailableMembers("us", dateStr, dateStr);
-          const dayUKMembers = await storage.getAvailableMembers("uk", dateStr, dateStr);
-          
-          if (dayUSMembers.length > 0 && dayUKMembers.length > 0) {
-            // Find best members for this day using fair rotation
-            let selectedUSMember = dayUSMembers[0];
-            let selectedUKMember = dayUKMembers[0];
-            let bestUSScore = -1;
-            let bestUKScore = -1;
+          for (const member of dayUSMembers) {
+            const assignmentCount = await storage.getMemberAssignmentCount(member.id);
+            const allAssignments = await storage.getRotaAssignments();
+            const memberAssignments = allAssignments.filter(a => 
+              a.usMemberId === member.id || a.ukMemberId === member.id
+            );
             
-            // Calculate fairness scores for US members
-            for (const member of dayUSMembers) {
-              const assignmentCount = await storage.getMemberAssignmentCount(member.id);
-              const allAssignments = await storage.getRotaAssignments();
-              const memberAssignments = allAssignments.filter(a => 
-                a.usMemberId === member.id || a.ukMemberId === member.id
-              );
-              
-              let daysSinceLastAssignment = 999;
-              if (memberAssignments.length > 0) {
-                const lastAssignment = memberAssignments.sort((a, b) => 
-                  new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
-                )[0];
-                const lastDate = new Date(lastAssignment.endDate);
-                const today = new Date();
-                daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-              }
-              
-              const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
-              if (fairnessScore > bestUSScore) {
-                bestUSScore = fairnessScore;
-                selectedUSMember = member;
-              }
+            let daysSinceLastAssignment = 999;
+            if (memberAssignments.length > 0) {
+              const lastAssignment = memberAssignments.sort((a, b) => 
+                new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+              )[0];
+              const lastDate = new Date(lastAssignment.endDate);
+              const today = new Date();
+              daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
             }
             
-            // Calculate fairness scores for UK members
-            for (const member of dayUKMembers) {
-              const assignmentCount = await storage.getMemberAssignmentCount(member.id);
-              const allAssignments = await storage.getRotaAssignments();
-              const memberAssignments = allAssignments.filter(a => 
-                a.usMemberId === member.id || a.ukMemberId === member.id
-              );
-              
-              let daysSinceLastAssignment = 999;
-              if (memberAssignments.length > 0) {
-                const lastAssignment = memberAssignments.sort((a, b) => 
-                  new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
-                )[0];
-                const lastDate = new Date(lastAssignment.endDate);
-                const today = new Date();
-                daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-              }
-              
-              const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
-              if (fairnessScore > bestUKScore) {
-                bestUKScore = fairnessScore;
-                selectedUKMember = member;
-              }
+            const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
+            if (fairnessScore > bestUSScore) {
+              bestUSScore = fairnessScore;
+              selectedUSMember = member;
             }
-            
-            // Create day assignment
-            const dayAssignment = await storage.createRotaAssignment({
-              startDate: dateStr,
-              endDate: dateStr,
-              usMemberId: selectedUSMember.id,
-              ukMemberId: selectedUKMember.id,
-              notes: "Auto-assigned (partial week)",
-              isManual: false,
-            });
-            
-            assignments.push({
-              date: dateStr,
-              usMembers: selectedUSMember.name,
-              ukMember: selectedUKMember.name
-            });
-            
-            // Record in history
-            await storage.createRotaHistory({
-              assignmentId: dayAssignment.id,
-              memberId: selectedUSMember.id,
-              region: "us",
-              startDate: dateStr,
-              endDate: dateStr,
-            });
-            
-            await storage.createRotaHistory({
-              assignmentId: dayAssignment.id,
-              memberId: selectedUKMember.id,
-              region: "uk",
-              startDate: dateStr,
-              endDate: dateStr,
-            });
-          } else {
-            // Track which days couldn't be assigned
-            const reasonUS = dayUSMembers.length === 0 ? "No US members available" : "";
-            const reasonUK = dayUKMembers.length === 0 ? "No UK members available" : "";
-            const reason = [reasonUS, reasonUK].filter(r => r).join(", ");
-            
-            skippedDays.push({
-              date: dateStr,
-              reason: reason
-            });
           }
-        }
-        
-        if (assignments.length > 0) {
-          return res.status(201).json({
-            message: `Partial assignment completed: ${assignments.length} days assigned, ${skippedDays.length} days skipped`,
-            assignments,
-            skippedDays,
-            period: `${assignmentStartDate} to ${assignmentEndDate}`
+          
+          for (const member of dayUKMembers) {
+            const assignmentCount = await storage.getMemberAssignmentCount(member.id);
+            const allAssignments = await storage.getRotaAssignments();
+            const memberAssignments = allAssignments.filter(a => 
+              a.usMemberId === member.id || a.ukMemberId === member.id
+            );
+            
+            let daysSinceLastAssignment = 999;
+            if (memberAssignments.length > 0) {
+              const lastAssignment = memberAssignments.sort((a, b) => 
+                new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+              )[0];
+              const lastDate = new Date(lastAssignment.endDate);
+              const today = new Date();
+              daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            }
+            
+            const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
+            if (fairnessScore > bestUKScore) {
+              bestUKScore = fairnessScore;
+              selectedUKMember = member;
+            }
+          }
+          
+          const dayAssignment = await storage.createRotaAssignment({
+            startDate: dateStr,
+            endDate: dateStr,
+            usMemberId: selectedUSMember.id,
+            ukMemberId: selectedUKMember.id,
+            notes: "Auto-assigned (partial week)",
+            isManual: false,
+          });
+          
+          assignments.push({
+            date: dateStr,
+            usMembers: selectedUSMember.name,
+            ukMember: selectedUKMember.name
+          });
+          
+          await storage.createRotaHistory({
+            assignmentId: dayAssignment.id,
+            memberId: selectedUSMember.id,
+            region: "us",
+            startDate: dateStr,
+            endDate: dateStr,
+          });
+          
+          await storage.createRotaHistory({
+            assignmentId: dayAssignment.id,
+            memberId: selectedUKMember.id,
+            region: "uk",
+            startDate: dateStr,
+            endDate: dateStr,
           });
         } else {
-          // Get conflict details for complete failure
-          const allUSMembers = await storage.getTeamMembersByRegion("us");
-          const allUKMembers = await storage.getTeamMembersByRegion("uk");
-          const conflictDetails = [];
+          const reasonUS = dayUSMembers.length === 0 ? "No US members available" : "";
+          const reasonUK = dayUKMembers.length === 0 ? "No UK members available" : "";
+          const reason = [reasonUS, reasonUK].filter(r => r).join(", ");
           
-          for (const member of allUSMembers) {
-            if (!member.isAvailable) {
-              conflictDetails.push(`${member.name} (US): Currently unavailable`);
-            } else if (member.holidayStart && member.holidayEnd) {
-              const holidayStart = new Date(member.holidayStart);
-              const holidayEnd = new Date(member.holidayEnd);
-              const assignStart = new Date(assignmentStartDate);
-              const assignEnd = new Date(assignmentEndDate);
-              
-              if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
-                conflictDetails.push(`${member.name} (US): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
-              }
-            } else if (member.unavailableStart && member.unavailableEnd) {
-              const unavailStart = new Date(member.unavailableStart);
-              const unavailEnd = new Date(member.unavailableEnd);
-              const assignStart = new Date(assignmentStartDate);
-              const assignEnd = new Date(assignmentEndDate);
-              
-              if (assignStart <= unavailEnd && assignEnd >= unavailStart) {
-                conflictDetails.push(`${member.name} (US): Unavailable ${member.unavailableStart} to ${member.unavailableEnd}`);
-              }
-            }
-          }
-          
-          for (const member of allUKMembers) {
-            if (!member.isAvailable) {
-              conflictDetails.push(`${member.name} (UK): Currently unavailable`);
-            } else if (member.holidayStart && member.holidayEnd) {
-              const holidayStart = new Date(member.holidayStart);
-              const holidayEnd = new Date(member.holidayEnd);
-              const assignStart = new Date(assignmentStartDate);
-              const assignEnd = new Date(assignmentEndDate);
-              
-              if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
-                conflictDetails.push(`${member.name} (UK): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
-              }
-            } else if (member.unavailableStart && member.unavailableEnd) {
-              const unavailStart = new Date(member.unavailableStart);
-              const unavailEnd = new Date(member.unavailableEnd);
-              const assignStart = new Date(assignmentStartDate);
-              const assignEnd = new Date(assignmentEndDate);
-              
-              if (assignStart <= unavailEnd && assignEnd >= unavailStart) {
-                conflictDetails.push(`${member.name} (UK): Unavailable ${member.unavailableStart} to ${member.unavailableEnd}`);
-              }
-            }
-          }
-          
-          return res.status(400).json({ 
-            message: "No days could be assigned - conflicts on all days",
-            period: `${assignmentStartDate} to ${assignmentEndDate}`,
-            conflicts: conflictDetails,
-            skippedDays
+          skippedDays.push({
+            date: dateStr,
+            reason: reason
           });
         }
-        
-        // This return prevents the full week assignment logic from running
-        return;
       }
-
-      // Enhanced fair rotation: consider both assignment count and time since last assignment
-      let selectedUSMember = usMembers[0];
-      let selectedUKMember = ukMembers[0];
-      let bestUSScore = -1;
-      let bestUKScore = -1;
-
-      // Calculate fairness score for each member (higher score = more deserving of assignment)
-      for (const member of usMembers) {
-        const assignmentCount = await storage.getMemberAssignmentCount(member.id);
+      
+      if (assignments.length > 0) {
+        return res.status(201).json({
+          message: `Partial assignment completed: ${assignments.length} days assigned, ${skippedDays.length} days skipped`,
+          assignments,
+          skippedDays,
+          period: `${assignmentStartDate} to ${assignmentEndDate}`
+        });
+      } else {
+        const allUSMembers = await storage.getTeamMembersByRegion("us");
+        const allUKMembers = await storage.getTeamMembersByRegion("uk");
+        const conflictDetails = [];
         
-        // Get the member's last assignment date to calculate time since last assignment
-        const allAssignments = await storage.getRotaAssignments();
-        const memberAssignments = allAssignments.filter(a => 
-          a.usMemberId === member.id || a.ukMemberId === member.id
-        );
-        
-        let daysSinceLastAssignment = 999; // Default for never assigned
-        if (memberAssignments.length > 0) {
-          const lastAssignment = memberAssignments.sort((a, b) => 
-            new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
-          )[0];
-          const lastDate = new Date(lastAssignment.endDate);
-          const today = new Date();
-          daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        for (const member of allUSMembers) {
+          if (!member.isAvailable) {
+            conflictDetails.push(`${member.name} (US): Currently unavailable`);
+          } else if (member.holidayStart && member.holidayEnd) {
+            const holidayStart = new Date(member.holidayStart);
+            const holidayEnd = new Date(member.holidayEnd);
+            const assignStart = new Date(assignmentStartDate);
+            const assignEnd = new Date(assignmentEndDate);
+            
+            if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
+              conflictDetails.push(`${member.name} (US): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
+            }
+          }
         }
         
-        // Fairness score: prioritize members with fewer assignments and longer time since last assignment
-        const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
-        
-        if (fairnessScore > bestUSScore) {
-          bestUSScore = fairnessScore;
-          selectedUSMember = member;
-        }
+        return res.status(400).json({ 
+          message: "No days could be assigned - conflicts on all days",
+          period: `${assignmentStartDate} to ${assignmentEndDate}`,
+          conflicts: conflictDetails,
+          skippedDays
+        });
       }
-
-      for (const member of ukMembers) {
-        const assignmentCount = await storage.getMemberAssignmentCount(member.id);
-        
-        // Get the member's last assignment date
-        const allAssignments = await storage.getRotaAssignments();
-        const memberAssignments = allAssignments.filter(a => 
-          a.usMemberId === member.id || a.ukMemberId === member.id
-        );
-        
-        let daysSinceLastAssignment = 999; // Default for never assigned
-        if (memberAssignments.length > 0) {
-          const lastAssignment = memberAssignments.sort((a, b) => 
-            new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
-          )[0];
-          const lastDate = new Date(lastAssignment.endDate);
-          const today = new Date();
-          daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-        }
-        
-        // Fairness score: prioritize members with fewer assignments and longer time since last assignment
-        const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
-        
-        if (fairnessScore > bestUKScore) {
-          bestUKScore = fairnessScore;
-          selectedUKMember = member;
-        }
-      }
-
-      const assignment = await storage.createRotaAssignment({
-        startDate: assignmentStartDate,
-        endDate: assignmentEndDate,
-        usMemberId: selectedUSMember.id,
-        ukMemberId: selectedUKMember.id,
-        notes: "Auto-assigned using fair rotation algorithm",
-        isManual: false
-      });
-
-      res.status(201).json(assignment);
     } catch (error) {
-      res.status(500).json({ message: "Failed to auto-assign rota" });
+      console.error('Error in auto-assign:', error);
+      res.status(500).json({ message: "Failed to auto-assign" });
     }
   });
 
-  // Fairness report
-  app.get("/api/reports/fairness", async (req, res) => {
+  // Get rota history
+  app.get("/api/rota-history", async (req, res) => {
     try {
-      const members = await storage.getTeamMembers();
-      const report = await Promise.all(
-        members.map(async (member) => {
-          const assignmentCount = await storage.getMemberAssignmentCount(member.id);
-          return {
-            id: member.id,
-            name: member.name,
-            region: member.region,
-            assignmentCount,
-            isAvailable: member.isAvailable
-          };
-        })
-      );
-      res.json(report);
+      const history = await storage.getRotaHistory();
+      res.json(history);
     } catch (error) {
-      res.status(500).json({ message: "Failed to generate fairness report" });
+      console.error('Error fetching rota history:', error);
+      res.status(500).json({ message: "Failed to fetch rota history" });
     }
   });
 
-
-
-  // Holiday management endpoints
+  // Get holidays
   app.get("/api/holidays", async (req, res) => {
     try {
       const holidays = await storage.getHolidays();
       res.json(holidays);
     } catch (error) {
+      console.error('Error fetching holidays:', error);
       res.status(500).json({ message: "Failed to fetch holidays" });
     }
   });
 
+  // Get holidays by member
   app.get("/api/holidays/member/:memberId", async (req, res) => {
     try {
       const memberId = parseInt(req.params.memberId);
       const holidays = await storage.getHolidaysByMember(memberId);
       res.json(holidays);
     } catch (error) {
+      console.error('Error fetching member holidays:', error);
       res.status(500).json({ message: "Failed to fetch member holidays" });
     }
   });
 
+  // Create holiday
   app.post("/api/holidays", async (req, res) => {
     try {
-      const holiday = insertHolidaySchema.parse(req.body);
-      const newHoliday = await storage.createHoliday(holiday);
-      res.status(201).json(newHoliday);
+      const holiday = await storage.createHoliday(req.body);
+      res.status(201).json(holiday);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid holiday data", errors: error.errors });
-      }
+      console.error('Error creating holiday:', error);
       res.status(500).json({ message: "Failed to create holiday" });
     }
   });
 
-  app.delete("/api/holidays/:id", async (req, res) => {
+  // Update holiday
+  app.patch("/api/holidays/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const deleted = await storage.deleteHoliday(id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Holiday not found" });
+      const holiday = await storage.updateHoliday(id, req.body);
+      if (holiday) {
+        res.json(holiday);
+      } else {
+        res.status(404).json({ message: "Holiday not found" });
       }
-      res.status(204).send();
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete holiday" });
+      console.error('Error updating holiday:', error);
+      res.status(500).json({ message: "Failed to update holiday" });
     }
   });
 
-  // Check holiday conflicts for an assignment
-  app.post("/api/rota-assignments/check-conflicts", async (req, res) => {
+  // Delete holiday
+  app.delete("/api/holidays/:id", async (req, res) => {
     try {
-      const assignment = req.body;
-      const conflicts = await storage.checkHolidayConflicts(assignment);
-      res.json(conflicts);
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteHoliday(id);
+      if (success) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Holiday not found" });
+      }
     } catch (error) {
-      console.error("Error checking holiday conflicts:", error);
-      res.status(500).json({ error: "Failed to check conflicts" });
+      console.error('Error deleting holiday:', error);
+      res.status(500).json({ message: "Failed to delete holiday" });
     }
   });
 
