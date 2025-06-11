@@ -100,7 +100,7 @@ export function QuickAssignModal({
         endDate: weekEndDate,
       });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       setLoadingStageModal("Assignment complete!");
       setTimeout(() => setLoadingStageModal(""), 800);
       
@@ -108,10 +108,18 @@ export function QuickAssignModal({
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
       
-      toast({
-        title: "Auto-Assignment Complete",
-        description: "Week has been automatically assigned using fair rotation",
-      });
+      // Handle partial assignment success
+      if (data.assignments && data.skippedDays) {
+        toast({
+          title: "Partial Assignment Complete",
+          description: `${data.assignments.length} days assigned, ${data.skippedDays.length} days skipped due to conflicts`,
+        });
+      } else {
+        toast({
+          title: "Auto-Assignment Complete",
+          description: "Week has been automatically assigned using fair rotation",
+        });
+      }
       
       setTimeout(() => onClose(), 1000);
     },

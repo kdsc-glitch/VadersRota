@@ -226,75 +226,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
       if (usMembers.length === 0 || ukMembers.length === 0) {
-        // Get all team members to show holiday conflicts
-        const allUSMembers = await storage.getTeamMembersByRegion("us");
-        const allUKMembers = await storage.getTeamMembersByRegion("uk");
+        // Try partial assignment - check each day individually
+        const startDate = new Date(assignmentStartDate);
+        const endDate = new Date(assignmentEndDate);
+        const assignments = [];
+        const skippedDays = [];
         
-        const conflictDetails = [];
-        
-        // Check US conflicts
-        for (const member of allUSMembers) {
-          if (!member.isAvailable) {
-            conflictDetails.push(`${member.name} (US): Currently unavailable`);
-          } else if (member.holidayStart && member.holidayEnd) {
-            const holidayStart = new Date(member.holidayStart);
-            const holidayEnd = new Date(member.holidayEnd);
-            const assignStart = new Date(assignmentStartDate);
-            const assignEnd = new Date(assignmentEndDate);
+        for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
+          const dateStr = currentDate.toISOString().split('T')[0];
+          
+          // Check availability for this specific day
+          const dayUSMembers = await storage.getAvailableMembers("us", dateStr, dateStr);
+          const dayUKMembers = await storage.getAvailableMembers("uk", dateStr, dateStr);
+          
+          if (dayUSMembers.length > 0 && dayUKMembers.length > 0) {
+            // Find best members for this day using fair rotation
+            let selectedUSMember = dayUSMembers[0];
+            let selectedUKMember = dayUKMembers[0];
+            let bestUSScore = -1;
+            let bestUKScore = -1;
             
-            if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
-              conflictDetails.push(`${member.name} (US): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
+            // Calculate fairness scores for US members
+            for (const member of dayUSMembers) {
+              const assignmentCount = await storage.getMemberAssignmentCount(member.id);
+              const allAssignments = await storage.getRotaAssignments();
+              const memberAssignments = allAssignments.filter(a => 
+                a.usMemberId === member.id || a.ukMemberId === member.id
+              );
+              
+              let daysSinceLastAssignment = 999;
+              if (memberAssignments.length > 0) {
+                const lastAssignment = memberAssignments.sort((a, b) => 
+                  new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+                )[0];
+                const lastDate = new Date(lastAssignment.endDate);
+                const today = new Date();
+                daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+              }
+              
+              const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
+              if (fairnessScore > bestUSScore) {
+                bestUSScore = fairnessScore;
+                selectedUSMember = member;
+              }
             }
-          } else if (member.unavailableStart && member.unavailableEnd) {
-            const unavailStart = new Date(member.unavailableStart);
-            const unavailEnd = new Date(member.unavailableEnd);
-            const assignStart = new Date(assignmentStartDate);
-            const assignEnd = new Date(assignmentEndDate);
             
-            if (assignStart <= unavailEnd && assignEnd >= unavailStart) {
-              conflictDetails.push(`${member.name} (US): Unavailable ${member.unavailableStart} to ${member.unavailableEnd}`);
+            // Calculate fairness scores for UK members
+            for (const member of dayUKMembers) {
+              const assignmentCount = await storage.getMemberAssignmentCount(member.id);
+              const allAssignments = await storage.getRotaAssignments();
+              const memberAssignments = allAssignments.filter(a => 
+                a.usMemberId === member.id || a.ukMemberId === member.id
+              );
+              
+              let daysSinceLastAssignment = 999;
+              if (memberAssignments.length > 0) {
+                const lastAssignment = memberAssignments.sort((a, b) => 
+                  new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+                )[0];
+                const lastDate = new Date(lastAssignment.endDate);
+                const today = new Date();
+                daysSinceLastAssignment = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+              }
+              
+              const fairnessScore = (daysSinceLastAssignment * 2) + ((10 - assignmentCount) * 3);
+              if (fairnessScore > bestUKScore) {
+                bestUKScore = fairnessScore;
+                selectedUKMember = member;
+              }
             }
+            
+            // Create day assignment
+            const dayAssignment = await storage.createRotaAssignment({
+              startDate: dateStr,
+              endDate: dateStr,
+              usMemberId: selectedUSMember.id,
+              ukMemberId: selectedUKMember.id,
+              notes: "Auto-assigned (partial week)",
+              isManual: false,
+            });
+            
+            assignments.push({
+              date: dateStr,
+              usMembers: selectedUSMember.name,
+              ukMember: selectedUKMember.name
+            });
+            
+            // Record in history
+            await storage.createRotaHistory({
+              assignmentId: dayAssignment.id,
+              memberId: selectedUSMember.id,
+              region: "us",
+              startDate: dateStr,
+              endDate: dateStr,
+            });
+            
+            await storage.createRotaHistory({
+              assignmentId: dayAssignment.id,
+              memberId: selectedUKMember.id,
+              region: "uk",
+              startDate: dateStr,
+              endDate: dateStr,
+            });
+          } else {
+            // Track which days couldn't be assigned
+            const reasonUS = dayUSMembers.length === 0 ? "No US members available" : "";
+            const reasonUK = dayUKMembers.length === 0 ? "No UK members available" : "";
+            const reason = [reasonUS, reasonUK].filter(r => r).join(", ");
+            
+            skippedDays.push({
+              date: dateStr,
+              reason: reason
+            });
           }
         }
         
-        // Check UK conflicts
-        for (const member of allUKMembers) {
-          if (!member.isAvailable) {
-            conflictDetails.push(`${member.name} (UK): Currently unavailable`);
-          } else if (member.holidayStart && member.holidayEnd) {
-            const holidayStart = new Date(member.holidayStart);
-            const holidayEnd = new Date(member.holidayEnd);
-            const assignStart = new Date(assignmentStartDate);
-            const assignEnd = new Date(assignmentEndDate);
-            
-            if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
-              conflictDetails.push(`${member.name} (UK): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
-            }
-          } else if (member.unavailableStart && member.unavailableEnd) {
-            const unavailStart = new Date(member.unavailableStart);
-            const unavailEnd = new Date(member.unavailableEnd);
-            const assignStart = new Date(assignmentStartDate);
-            const assignEnd = new Date(assignmentEndDate);
-            
-            if (assignStart <= unavailEnd && assignEnd >= unavailStart) {
-              conflictDetails.push(`${member.name} (UK): Unavailable ${member.unavailableStart} to ${member.unavailableEnd}`);
+        if (assignments.length > 0) {
+          return res.status(201).json({
+            message: `Partial assignment completed: ${assignments.length} days assigned, ${skippedDays.length} days skipped`,
+            assignments,
+            skippedDays,
+            period: `${assignmentStartDate} to ${assignmentEndDate}`
+          });
+        } else {
+          // Get conflict details for complete failure
+          const allUSMembers = await storage.getTeamMembersByRegion("us");
+          const allUKMembers = await storage.getTeamMembersByRegion("uk");
+          const conflictDetails = [];
+          
+          for (const member of allUSMembers) {
+            if (!member.isAvailable) {
+              conflictDetails.push(`${member.name} (US): Currently unavailable`);
+            } else if (member.holidayStart && member.holidayEnd) {
+              const holidayStart = new Date(member.holidayStart);
+              const holidayEnd = new Date(member.holidayEnd);
+              const assignStart = new Date(assignmentStartDate);
+              const assignEnd = new Date(assignmentEndDate);
+              
+              if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
+                conflictDetails.push(`${member.name} (US): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
+              }
+            } else if (member.unavailableStart && member.unavailableEnd) {
+              const unavailStart = new Date(member.unavailableStart);
+              const unavailEnd = new Date(member.unavailableEnd);
+              const assignStart = new Date(assignmentStartDate);
+              const assignEnd = new Date(assignmentEndDate);
+              
+              if (assignStart <= unavailEnd && assignEnd >= unavailStart) {
+                conflictDetails.push(`${member.name} (US): Unavailable ${member.unavailableStart} to ${member.unavailableEnd}`);
+              }
             }
           }
+          
+          for (const member of allUKMembers) {
+            if (!member.isAvailable) {
+              conflictDetails.push(`${member.name} (UK): Currently unavailable`);
+            } else if (member.holidayStart && member.holidayEnd) {
+              const holidayStart = new Date(member.holidayStart);
+              const holidayEnd = new Date(member.holidayEnd);
+              const assignStart = new Date(assignmentStartDate);
+              const assignEnd = new Date(assignmentEndDate);
+              
+              if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
+                conflictDetails.push(`${member.name} (UK): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
+              }
+            } else if (member.unavailableStart && member.unavailableEnd) {
+              const unavailStart = new Date(member.unavailableStart);
+              const unavailEnd = new Date(member.unavailableEnd);
+              const assignStart = new Date(assignmentStartDate);
+              const assignEnd = new Date(assignmentEndDate);
+              
+              if (assignStart <= unavailEnd && assignEnd >= unavailStart) {
+                conflictDetails.push(`${member.name} (UK): Unavailable ${member.unavailableStart} to ${member.unavailableEnd}`);
+              }
+            }
+          }
+          
+          return res.status(400).json({ 
+            message: "No days could be assigned - conflicts on all days",
+            period: `${assignmentStartDate} to ${assignmentEndDate}`,
+            conflicts: conflictDetails,
+            skippedDays
+          });
         }
-        
-        const message = usMembers.length === 0 && ukMembers.length === 0 
-          ? "No available members for either region during this period"
-          : usMembers.length === 0 
-            ? "No available US team members during this period"
-            : "No available UK team members during this period";
-        
-        return res.status(400).json({ 
-          message,
-          period: `${assignmentStartDate} to ${assignmentEndDate}`,
-          conflicts: conflictDetails,
-          availableUS: usMembers.length,
-          availableUK: ukMembers.length
-        });
       }
 
       // Enhanced fair rotation: consider both assignment count and time since last assignment

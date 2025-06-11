@@ -41,7 +41,7 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
       
       return apiRequest("POST", "/api/rota-assignments/auto-assign");
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       setLoadingStageTeam("Assignment complete!");
       setTimeout(() => setLoadingStageTeam(""), 1000);
       
@@ -49,10 +49,18 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
       
-      toast({
-        title: "Auto-Assignment Complete",
-        description: "Next week's support rotation has been automatically assigned",
-      });
+      // Handle partial assignment success
+      if (data.assignments && data.skippedDays) {
+        toast({
+          title: "Partial Assignment Complete",
+          description: `${data.assignments.length} days assigned, ${data.skippedDays.length} days skipped due to conflicts`,
+        });
+      } else {
+        toast({
+          title: "Auto-Assignment Complete",
+          description: "Next week's support rotation has been automatically assigned",
+        });
+      }
     },
     onError: (error: any) => {
       setLoadingStageTeam("");

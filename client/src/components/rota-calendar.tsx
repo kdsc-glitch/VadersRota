@@ -147,9 +147,23 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
         endDate: weekEndStr,
       });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       setLoadingStage("Assignment complete!");
       setTimeout(() => setLoadingStage(""), 1000);
+      
+      // Handle partial assignment success
+      if (data.assignments && data.skippedDays) {
+        const assignedDays = data.assignments.map((a: any) => 
+          `${new Date(a.date).toLocaleDateString()}: ${a.usMembers} (US), ${a.ukMember} (UK)`
+        ).join('\n');
+        
+        const skippedDays = data.skippedDays.map((s: any) => 
+          `${new Date(s.date).toLocaleDateString()}: ${s.reason}`
+        ).join('\n');
+        
+        alert(`${data.message}\n\nAssigned days:\n${assignedDays}\n\nSkipped days:\n${skippedDays}`);
+      }
+      
       setRefreshKey(prev => prev + 1);
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
