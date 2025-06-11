@@ -47,7 +47,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       
       for (const assignment of allAssignments) {
         try {
-          const response = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
+          const response: any = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
           if (response.hasConflict) {
             // Store conflict info for each date in the assignment range
             const startDate = new Date(assignment.startDate);
@@ -288,19 +288,25 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
             {weekDates.map((date, index) => {
               const dayUKMember = getDayUKMember(date);
               const isAssigned = !!dayUKMember;
+              const dateStr = date.toISOString().split('T')[0];
+              const conflict = holidayConflicts.get(dateStr);
+              const hasUKConflict = conflict && conflict.conflictingMembers.some((m: any) => m.region === 'uk');
               
               return (
                 <div 
                   key={index} 
                   className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
-                    isAssigned 
-                      ? "bg-green-50 border-green-200 hover:bg-green-100" 
-                      : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+                    hasUKConflict
+                      ? "bg-red-50 border-red-200 hover:bg-red-100"
+                      : isAssigned 
+                        ? "bg-green-50 border-green-200 hover:bg-green-100" 
+                        : "bg-slate-50 border-slate-200 hover:bg-slate-100"
                   }`}
                   onClick={() => handleDayClick(date)}
+                  title={hasUKConflict ? `Holiday conflict: ${conflict.conflictingMembers.filter((m: any) => m.region === 'uk').map((m: any) => m.name).join(', ')}` : ''}
                 >
                   <div className={`text-xs font-medium ${
-                    isAssigned ? "text-green-800" : "text-slate-600"
+                    hasUKConflict ? "text-red-800" : isAssigned ? "text-green-800" : "text-slate-600"
                   }`}>
                     {dayUKMember 
                       ? getNameInitials(dayUKMember.name)
@@ -308,9 +314,9 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                     }
                   </div>
                   <div className={`text-xs ${
-                    isAssigned ? "text-green-600" : "text-slate-500"
+                    hasUKConflict ? "text-red-600" : isAssigned ? "text-green-600" : "text-slate-500"
                   }`}>
-                    {isAssigned ? "Assigned" : "Click to assign"}
+                    {hasUKConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
                   </div>
                 </div>
               );
