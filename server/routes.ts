@@ -300,74 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // xMatters integration endpoints
-  app.post("/api/xmatters/test-connection", async (req, res) => {
-    try {
-      const { xMattersUrl, apiToken, groupId } = req.body;
-      
-      // Simulate xMatters API connection test
-      // In a real implementation, this would make an actual HTTP request to xMatters
-      if (!xMattersUrl || !apiToken || !groupId) {
-        return res.status(400).json({ message: "Missing required xMatters configuration" });
-      }
 
-      // Simulate connection test
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      res.json({ 
-        success: true, 
-        message: "Successfully connected to xMatters",
-        groupFound: true,
-        memberCount: 24
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to test xMatters connection" });
-    }
-  });
-
-  app.post("/api/xmatters/sync-rota", async (req, res) => {
-    try {
-      const { xMattersUrl, apiToken, groupId } = req.body;
-      
-      // Simulate fetching DSG rota from xMatters
-      // In a real implementation, this would:
-      // 1. Make API calls to xMatters to get current on-call schedule
-      // 2. Find which Vaders team members are currently on DSG duty
-      // 3. Update their isDsgMember status accordingly
-      
-      if (!xMattersUrl || !apiToken || !groupId) {
-        return res.status(400).json({ message: "Missing required xMatters configuration" });
-      }
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // For demonstration, mark Alex Kumar as the current DSG member
-      const members = await storage.getTeamMembers();
-      const alexKumar = members.find(m => m.name === "Alex Kumar");
-      
-      if (alexKumar) {
-        // Reset all DSG memberships
-        for (const member of members) {
-          if (member.isDsgMember) {
-            await storage.updateTeamMember(member.id, { isDsgMember: false });
-          }
-        }
-        
-        // Set Alex as current DSG member
-        await storage.updateTeamMember(alexKumar.id, { isDsgMember: true });
-      }
-      
-      res.json({ 
-        success: true, 
-        message: "Successfully synchronized with xMatters DSG rota",
-        updatedMembers: 1,
-        currentDsgMember: alexKumar?.name || "None"
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to sync with xMatters" });
-    }
-  });
 
   // Holiday management endpoints
   app.get("/api/holidays", async (req, res) => {
