@@ -54,7 +54,6 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
       region: "us",
       role: "developer",
       isAvailable: true,
-      isDsgMember: false,
     },
   });
 
@@ -66,7 +65,6 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
         region: member.region,
         role: member.role,
         isAvailable: member.isAvailable,
-        isDsgMember: member.isDsgMember,
         holidayStart: member.holidayStart || undefined,
         holidayEnd: member.holidayEnd || undefined,
       });
@@ -355,23 +353,7 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="isDsgMember"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>DSG Member</FormLabel>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+
             </div>
 
             {/* Holiday Periods Management */}
