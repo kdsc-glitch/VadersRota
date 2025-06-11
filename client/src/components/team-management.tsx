@@ -52,13 +52,7 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
         </Badge>
       );
     }
-    if (member.isDsgMember) {
-      return (
-        <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-          DSG Main
-        </Badge>
-      );
-    }
+
     return (
       <Badge variant="secondary" className="bg-green-100 text-green-800">
         Available

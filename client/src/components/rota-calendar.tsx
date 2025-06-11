@@ -391,19 +391,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
             })}
           </div>
 
-          {/* DSG Main Rota Indicator */}
-          <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Link className="text-purple-600 w-4 h-4" />
-                <span className="text-sm font-medium text-purple-800">DSG Main Rota Sync</span>
-              </div>
-              <span className="text-xs text-purple-600">Auto-updating</span>
-            </div>
-            <p className="text-xs text-purple-700 mt-1">
-              Team assignments automatically follow main DSG rotation when members are selected
-            </p>
-          </div>
+
         </CardContent>
       </Card>
 

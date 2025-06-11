@@ -6,7 +6,6 @@ import type { TeamMember, RotaAssignment } from "@shared/schema";
 interface DashboardStatsProps {
   currentUSMember: TeamMember | null | undefined;
   currentUKMember: TeamMember | null | undefined;
-  dsgMember: TeamMember | null | undefined;
   nextRotationDate: string;
   currentAssignment: RotaAssignment | undefined;
 }
@@ -14,7 +13,6 @@ interface DashboardStatsProps {
 export function DashboardStats({ 
   currentUSMember, 
   currentUKMember, 
-  dsgMember, 
   nextRotationDate,
   currentAssignment 
 }: DashboardStatsProps) {
@@ -83,28 +81,7 @@ export function DashboardStats({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">DSG Main Rota</p>
-              <p className="text-2xl font-semibold text-slate-900">
-                {dsgMember?.name || "None assigned"}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Building className="text-purple-600 w-6 h-6" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center space-x-2">
-            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-              <div className="w-2 h-2 bg-purple-400 rounded-full mr-1"></div>
-              Synced
-            </Badge>
-            <span className="text-xs text-slate-500">Auto-assigned</span>
-          </div>
-        </CardContent>
-      </Card>
+
 
       <Card>
         <CardContent className="p-6">

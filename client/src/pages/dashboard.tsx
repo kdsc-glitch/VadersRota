@@ -55,9 +55,7 @@ export default function Dashboard() {
     return teamMembers.find(m => m.id === currentAssignment.ukMemberId);
   };
 
-  const getDSGMember = () => {
-    return teamMembers.find(m => m.isDsgMember);
-  };
+
 
   const getNextRotationDate = () => {
     if (upcomingAssignments.length === 0) return "Not scheduled";
@@ -107,7 +105,6 @@ export default function Dashboard() {
         <DashboardStats 
           currentUSMember={getCurrentUSMember()}
           currentUKMember={getCurrentUKMember()}
-          dsgMember={getDSGMember()}
           nextRotationDate={getNextRotationDate()}
           currentAssignment={currentAssignment}
         />
