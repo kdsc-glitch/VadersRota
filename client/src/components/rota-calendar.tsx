@@ -52,20 +52,31 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           
           if (response.hasConflict) {
             console.log('Found conflict for assignment:', assignment.id, 'Members:', response.conflictingMembers);
-            // Store conflict info for each date in the assignment range
-            const startDate = new Date(assignment.startDate);
-            const endDate = new Date(assignment.endDate);
             
-            const currentDate = new Date(startDate);
-            while (currentDate <= endDate) {
-              const dateStr = currentDate.toISOString().split('T')[0];
-              console.log('Adding conflict for date:', dateStr);
-              conflictMap.set(dateStr, {
-                hasConflict: true,
-                conflictingMembers: response.conflictingMembers,
-                assignment
-              });
-              currentDate.setDate(currentDate.getDate() + 1);
+            // For each conflicting member, only mark dates that fall within their actual holiday period
+            for (const member of response.conflictingMembers) {
+              if (member.holidayStart && member.holidayEnd) {
+                const holidayStart = new Date(member.holidayStart);
+                const holidayEnd = new Date(member.holidayEnd);
+                const assignmentStart = new Date(assignment.startDate);
+                const assignmentEnd = new Date(assignment.endDate);
+                
+                // Find the overlap between assignment and holiday
+                const overlapStart = new Date(Math.max(assignmentStart.getTime(), holidayStart.getTime()));
+                const overlapEnd = new Date(Math.min(assignmentEnd.getTime(), holidayEnd.getTime()));
+                
+                const currentDate = new Date(overlapStart);
+                while (currentDate <= overlapEnd) {
+                  const dateStr = currentDate.toISOString().split('T')[0];
+                  console.log('Adding conflict for date:', dateStr, 'Member:', member.name);
+                  conflictMap.set(dateStr, {
+                    hasConflict: true,
+                    conflictingMembers: [member], // Only include the member for this specific date
+                    assignment
+                  });
+                  currentDate.setDate(currentDate.getDate() + 1);
+                }
+              }
             }
           }
         } catch (error) {
