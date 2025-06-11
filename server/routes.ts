@@ -68,6 +68,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/team-members/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = insertTeamMemberSchema.partial().parse(req.body);
+      const member = await storage.updateTeamMember(id, updates);
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update team member" });
+    }
+  });
+
   app.delete("/api/team-members/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
