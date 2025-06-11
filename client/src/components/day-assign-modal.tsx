@@ -14,8 +14,8 @@ import type { TeamMember } from "@shared/schema";
 
 const dayAssignSchema = z.object({
   date: z.string().min(1, "Date is required"),
-  usMemberId: z.coerce.number().min(1, "Please select a US team member"),
-  ukMemberId: z.coerce.number().min(1, "Please select a UK team member"),
+  usMemberId: z.number().min(1, "Please select a US team member"),
+  ukMemberId: z.number().min(1, "Please select a UK team member"),
 });
 
 type DayAssignFormData = z.infer<typeof dayAssignSchema>;
@@ -41,7 +41,12 @@ export function DayAssignModal({
   const form = useForm<DayAssignFormData>({
     resolver: zodResolver(dayAssignSchema),
     defaultValues: {
-      date: selectedDate,
+      date: selectedDate || "",
+      usMemberId: existingAssignment?.usMemberId || 0,
+      ukMemberId: existingAssignment?.ukMemberId || 0,
+    },
+    values: {
+      date: selectedDate || "",
       usMemberId: existingAssignment?.usMemberId || 0,
       ukMemberId: existingAssignment?.ukMemberId || 0,
     },
@@ -94,7 +99,20 @@ export function DayAssignModal({
   const onSubmit = (data: DayAssignFormData) => {
     console.log('Day assignment form data:', data);
     console.log('Form errors:', form.formState.errors);
-    assignMutation.mutate(data);
+    console.log('Form is valid:', form.formState.isValid);
+    console.log('Form values:', form.getValues());
+    
+    if (data.usMemberId && data.ukMemberId && data.date) {
+      console.log('Submitting assignment...');
+      assignMutation.mutate(data);
+    } else {
+      console.log('Form validation failed - missing required fields');
+      toast({
+        title: "Validation Error",
+        description: "Please select both US and UK team members",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = () => {
@@ -123,7 +141,13 @@ export function DayAssignModal({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>US Support</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value > 0 ? field.value.toString() : ""}>
+                  <Select 
+                    onValueChange={(value) => {
+                      console.log('US member selected:', value);
+                      field.onChange(parseInt(value));
+                    }} 
+                    value={field.value > 0 ? field.value.toString() : undefined}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select US team member" />
@@ -153,7 +177,13 @@ export function DayAssignModal({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>UK Support</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value > 0 ? field.value.toString() : ""}>
+                  <Select 
+                    onValueChange={(value) => {
+                      console.log('UK member selected:', value);
+                      field.onChange(parseInt(value));
+                    }} 
+                    value={field.value > 0 ? field.value.toString() : undefined}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select UK team member" />
