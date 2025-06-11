@@ -242,6 +242,12 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
         isOpen={showFairnessModal}
         onClose={() => setShowFairnessModal(false)}
       />
+      
+      <EditMemberModal
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
+        member={selectedMember}
+      />
     </div>
   );
 }
