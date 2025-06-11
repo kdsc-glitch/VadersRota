@@ -118,12 +118,22 @@ export function QuickAssignModal({
     onError: (error: any) => {
       setLoadingStageModal("");
       
-      // Show detailed conflict information if available
+      // Extract error details from response
+      const errorData = error.response?.data || error.data || {};
+      console.log('Quick assign modal auto-assign error:', errorData);
+      
       let errorMessage = "Failed to auto-assign week";
-      if (error.response?.data?.conflicts && error.response.data.conflicts.length > 0) {
-        errorMessage = `${error.response.data.message}\n\nConflicts:\n${error.response.data.conflicts.join('\n')}`;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+      
+      if (errorData.message) {
+        errorMessage = errorData.message;
+        
+        if (errorData.conflicts && errorData.conflicts.length > 0) {
+          errorMessage += `\n\nConflicts:\n${errorData.conflicts.join('\n')}`;
+        }
+        
+        if (errorData.period) {
+          errorMessage += `\n\nPeriod: ${errorData.period}`;
+        }
       }
       
       toast({

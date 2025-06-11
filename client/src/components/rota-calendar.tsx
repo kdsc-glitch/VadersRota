@@ -158,16 +158,30 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       setLoadingStage("");
       console.error('Auto-assign failed:', error);
       
-      // Show detailed conflict information if available
-      if (error.response?.data?.conflicts) {
-        const conflicts = error.response.data.conflicts;
-        const conflictMessage = conflicts.length > 0 
-          ? `Conflicts detected:\n${conflicts.join('\n')}`
-          : error.response.data.message || "Auto-assignment failed";
+      // Extract error details from response
+      const errorData = error.response?.data || error.data || {};
+      console.log('Error details:', errorData);
+      
+      let alertMessage = "Auto-assignment failed";
+      
+      if (errorData.message) {
+        alertMessage = `Auto-assignment failed: ${errorData.message}`;
         
-        // Use browser alert for detailed conflict information
-        alert(`Auto-assignment failed for ${error.response.data.period || 'selected period'}:\n\n${conflictMessage}`);
+        if (errorData.period) {
+          alertMessage += `\n\nPeriod: ${errorData.period}`;
+        }
+        
+        if (errorData.conflicts && errorData.conflicts.length > 0) {
+          alertMessage += `\n\nConflicts:\n${errorData.conflicts.join('\n')}`;
+        }
+        
+        if (errorData.availableUS !== undefined && errorData.availableUK !== undefined) {
+          alertMessage += `\n\nAvailable members: US: ${errorData.availableUS}, UK: ${errorData.availableUK}`;
+        }
       }
+      
+      // Show detailed error information
+      alert(alertMessage);
     },
   });
 
