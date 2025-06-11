@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Plus, Link, FlagIcon, Wand2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { QuickAssignModal } from "./quick-assign-modal";
 import { DayAssignModal } from "./day-assign-modal";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { TeamMember, RotaAssignment } from "@shared/schema";
 
 interface RotaCalendarProps {
@@ -48,11 +48,8 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       for (const assignment of allAssignments) {
         try {
           const response: any = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
-          console.log('Assignment:', assignment.id, 'Response:', response);
           
           if (response.hasConflict) {
-            console.log('Found conflict for assignment:', assignment.id, 'Members:', response.conflictingMembers);
-            
             // For each conflicting member, only mark dates that fall within their actual holiday period
             for (const member of response.conflictingMembers) {
               if (member.holidayStart && member.holidayEnd) {
@@ -68,7 +65,6 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                 const currentDate = new Date(overlapStart);
                 while (currentDate <= overlapEnd) {
                   const dateStr = currentDate.toISOString().split('T')[0];
-                  console.log('Adding conflict for date:', dateStr, 'Member:', member.name);
                   conflictMap.set(dateStr, {
                     hasConflict: true,
                     conflictingMembers: [member], // Only include the member for this specific date
@@ -83,8 +79,6 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           console.error("Error checking conflicts for assignment:", assignment.id, error);
         }
       }
-      
-      console.log('Final conflict map:', conflictMap);
       setHolidayConflicts(conflictMap);
     };
     
@@ -128,10 +122,42 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     setShowQuickAssignModal(true);
   };
 
+  const clearWeekMutation = useMutation({
+    mutationFn: async () => {
+      const weekStartStr = startOfWeek.toISOString().split('T')[0];
+      const weekEndStr = weekDates[6].toISOString().split('T')[0];
+      
+      // Find all assignments that fall within this week
+      const weekAssignments = allAssignments.filter(assignment => {
+        const assignmentStart = new Date(assignment.startDate);
+        const assignmentEnd = new Date(assignment.endDate);
+        const weekStart = new Date(weekStartStr);
+        const weekEnd = new Date(weekEndStr);
+        
+        // Check if assignment overlaps with this week
+        return assignmentStart <= weekEnd && assignmentEnd >= weekStart;
+      });
+      
+      // Delete all assignments for this week
+      for (const assignment of weekAssignments) {
+        await apiRequest("DELETE", `/api/rota-assignments/${assignment.id}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+    },
+  });
+
+  const handleClearWeek = () => {
+    if (confirm(`Are you sure you want to clear all assignments for the week of ${startOfWeek.toLocaleDateString()}?`)) {
+      clearWeekMutation.mutate();
+    }
+  };
+
   const handleDayClick = (date: Date) => {
-    console.log('Day clicked:', date);
     const dateStr = date.toISOString().split('T')[0];
-    console.log('Date string:', dateStr);
     
     // Check for day-specific assignment first
     let dayAssignment = allAssignments.find(assignment => 
@@ -146,12 +172,9 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       );
     }
     
-    console.log('Assignment found:', dayAssignment);
-    
     setSelectedDate(dateStr);
     setSelectedDayAssignment(dayAssignment || null);
     setShowDayAssignModal(true);
-    console.log('Modal should open now');
   };
 
   const getNameInitials = (name: string) => {
@@ -228,6 +251,11 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                 <Button onClick={handleWeekClick} size="sm">
                   <Wand2 className="w-4 h-4 mr-1" />
                   Auto-Assign Week
+                </Button>
+              )}
+              {weekAssignment && (
+                <Button onClick={handleClearWeek} variant="outline" size="sm">
+                  Clear Week
                 </Button>
               )}
               <Button onClick={onManualAssign} size="sm">
