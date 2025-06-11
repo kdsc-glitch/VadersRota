@@ -248,6 +248,13 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
               const conflict = holidayConflicts.get(dateStr);
               const hasUSConflict = conflict && conflict.conflictingMembers.some((m: any) => m.region === 'us');
               
+              // Debug logging for June 13th
+              if (dateStr === '2025-06-13') {
+                console.log('June 13th - Conflict data:', conflict);
+                console.log('June 13th - Has US conflict:', hasUSConflict);
+                console.log('June 13th - US Member:', dayUSMember);
+              }
+              
               return (
                 <div 
                   key={index} 
