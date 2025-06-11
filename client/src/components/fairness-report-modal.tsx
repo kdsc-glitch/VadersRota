@@ -27,25 +27,37 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
   const usMembers = fairnessData.filter(m => m.region === "us");
   const ukMembers = fairnessData.filter(m => m.region === "uk");
 
-  const getAssignmentLevel = (count: number, maxCount: number) => {
+  const getAssignmentLevel = (count: number, avgCount: number, maxCount: number) => {
     if (maxCount === 0) return "none";
-    const ratio = count / maxCount;
-    if (ratio >= 0.8) return "high";
-    if (ratio >= 0.5) return "medium";
-    if (ratio >= 0.2) return "low";
-    return "minimal";
+    
+    // Calculate how far this member deviates from the average
+    const deviationFromAvg = count - avgCount;
+    const maxDeviation = maxCount - avgCount;
+    
+    // If everyone has the same count (no deviation), it's balanced
+    if (maxDeviation === 0) return "balanced";
+    
+    // Calculate relative position compared to average
+    if (deviationFromAvg > maxDeviation * 0.5) return "high";
+    if (deviationFromAvg > maxDeviation * 0.1) return "above-average";
+    if (deviationFromAvg < -maxDeviation * 0.5) return "low";
+    if (deviationFromAvg < -maxDeviation * 0.1) return "below-average";
+    
+    return "balanced";
   };
 
   const getAssignmentBadge = (level: string) => {
     switch (level) {
       case "high":
-        return <Badge className="bg-red-100 text-red-800">High Load</Badge>;
-      case "medium":
-        return <Badge className="bg-amber-100 text-amber-800">Medium Load</Badge>;
+        return <Badge className="bg-red-100 text-red-800">Above Fair Share</Badge>;
+      case "above-average":
+        return <Badge className="bg-orange-100 text-orange-800">Slightly High</Badge>;
+      case "balanced":
+        return <Badge className="bg-green-100 text-green-800">Balanced</Badge>;
+      case "below-average":
+        return <Badge className="bg-blue-100 text-blue-800">Slightly Low</Badge>;
       case "low":
-        return <Badge className="bg-blue-100 text-blue-800">Low Load</Badge>;
-      case "minimal":
-        return <Badge className="bg-green-100 text-green-800">Minimal Load</Badge>;
+        return <Badge className="bg-slate-100 text-slate-800">Below Fair Share</Badge>;
       default:
         return <Badge variant="secondary">No Assignments</Badge>;
     }
@@ -102,7 +114,7 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
             </h3>
             <div className="space-y-2">
               {usMembers.map((member) => {
-                const level = getAssignmentLevel(member.assignmentCount, maxAssignments);
+                const level = getAssignmentLevel(member.assignmentCount, avgAssignments, maxAssignments);
                 return (
                   <Card key={member.id}>
                     <CardContent className="p-4">
@@ -158,7 +170,7 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
             </h3>
             <div className="space-y-2">
               {ukMembers.map((member) => {
-                const level = getAssignmentLevel(member.assignmentCount, maxAssignments);
+                const level = getAssignmentLevel(member.assignmentCount, avgAssignments, maxAssignments);
                 return (
                   <Card key={member.id}>
                     <CardContent className="p-4">
