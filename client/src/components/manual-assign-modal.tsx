@@ -36,8 +36,8 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
     defaultValues: {
       startDate: "",
       endDate: "",
-      usMemberId: 0,
-      ukMemberId: 0,
+      usMemberId: undefined,
+      ukMemberId: undefined,
       notes: "",
       isManual: true,
     },
@@ -119,18 +119,27 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>US Support</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                  <Select 
+                    value={field.value?.toString() || ""} 
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select US team member" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {usMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id.toString()}>
-                          {member.name}
+                      {usMembers.length > 0 ? (
+                        usMembers.map((member) => (
+                          <SelectItem key={member.id} value={member.id.toString()}>
+                            {member.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>
+                          Loading US team members...
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -144,18 +153,27 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>UK Support</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                  <Select 
+                    value={field.value?.toString() || ""} 
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select UK team member" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {ukMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id.toString()}>
-                          {member.name}
+                      {ukMembers.length > 0 ? (
+                        ukMembers.map((member) => (
+                          <SelectItem key={member.id} value={member.id.toString()}>
+                            {member.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="loading" disabled>
+                          Loading UK team members...
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
