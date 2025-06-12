@@ -33,7 +33,6 @@ export interface IStorage {
   deleteHoliday(id: number): Promise<boolean>;
 
   // Utility methods
-  getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]>;
   getMemberAssignmentCount(memberId: number): Promise<number>;
   checkHolidayConflicts(assignment: RotaAssignment): Promise<{hasConflict: boolean, conflictingMembers: TeamMember[]}>;
 }
