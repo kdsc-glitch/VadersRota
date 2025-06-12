@@ -44,7 +44,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     queryKey: ["/api/rota-assignments", refreshKey],
   });
 
-  // Load conflict data for ALL assignments to detect any holiday conflicts
+  // Load conflict data efficiently - only check assignments in current month view
   useEffect(() => {
     let isActive = true;
     
@@ -53,43 +53,72 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       
       const conflicts = new Map();
       
-      // Check ALL assignments for potential conflicts, not just specific dates
-      for (const assignment of allAssignments) {
+      // Get current month bounds to limit API calls
+      const currentMonth = startOfWeek.getMonth();
+      const currentYear = startOfWeek.getFullYear();
+      
+      // Filter assignments to current month only to reduce API calls
+      const monthAssignments = allAssignments.filter(assignment => {
+        const assignmentDate = new Date(assignment.startDate);
+        return assignmentDate.getMonth() === currentMonth && assignmentDate.getFullYear() === currentYear;
+      });
+      
+      console.log(`Checking ${monthAssignments.length} assignments in current month for conflicts`);
+      
+      // Process assignments in smaller batches to avoid overwhelming the API
+      const batchSize = 5;
+      for (let i = 0; i < monthAssignments.length; i += batchSize) {
         if (!isActive) break;
         
-        try {
-          // Use fetch directly to check each assignment for conflicts
-          const response = await fetch('/api/rota-assignments/check-conflicts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: assignment.id,
-              startDate: assignment.startDate,
-              endDate: assignment.endDate,
-              usMemberId: assignment.usMemberId,
-              ukMemberId: assignment.ukMemberId
-            })
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
+        const batch = monthAssignments.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (assignment) => {
+          try {
+            const response = await fetch('/api/rota-assignments/check-conflicts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: assignment.id,
+                startDate: assignment.startDate,
+                endDate: assignment.endDate,
+                usMemberId: assignment.usMemberId,
+                ukMemberId: assignment.ukMemberId
+              })
+            });
             
-            if (result.hasConflict && result.conflictingMembers?.length > 0) {
-              conflicts.set(assignment.startDate, {
-                hasConflict: true,
-                conflictingMembers: result.conflictingMembers,
-                assignment
-              });
+            if (response.ok) {
+              const result = await response.json();
+              
+              if (result.hasConflict && result.conflictingMembers?.length > 0) {
+                return {
+                  date: assignment.startDate,
+                  conflict: {
+                    hasConflict: true,
+                    conflictingMembers: result.conflictingMembers,
+                    assignment
+                  }
+                };
+              }
             }
+          } catch (error) {
+            console.error(`Failed to check assignment ${assignment.id}:`, error);
           }
-        } catch (error) {
-          console.error(`Failed to check assignment ${assignment.id}:`, error);
-        }
+          return null;
+        });
+        
+        const results = await Promise.all(batchPromises);
+        results.forEach(result => {
+          if (result) {
+            conflicts.set(result.date, result.conflict);
+          }
+        });
+        
+        // Small delay between batches to avoid overwhelming server
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
       
       if (isActive) {
         setHolidayConflicts(conflicts);
-        console.log(`Loaded conflicts for ${conflicts.size} dates out of ${allAssignments.length} total assignments`);
+        console.log(`Loaded conflicts for ${conflicts.size} dates in current month`);
         if (conflicts.size > 0) {
           console.log('Conflicted dates:', Array.from(conflicts.keys()));
         }
@@ -101,7 +130,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     return () => {
       isActive = false;
     };
-  }, [allAssignments.length, refreshKey]);
+  }, [allAssignments.length, refreshKey, startOfWeek.getMonth(), startOfWeek.getFullYear()]);
 
   // Find assignment that covers this week
   const weekStartStr = startOfWeek.toISOString().split('T')[0];
