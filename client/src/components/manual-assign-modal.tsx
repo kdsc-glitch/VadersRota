@@ -45,10 +45,6 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
 
   const usMembers = teamMembers.filter(m => m.region === "us");
   const ukMembers = teamMembers.filter(m => m.region === "uk");
-  
-  console.log("Manual assign modal - teamMembers:", teamMembers);
-  console.log("Manual assign modal - usMembers:", usMembers);
-  console.log("Manual assign modal - ukMembers:", ukMembers);
 
   const assignMutation = useMutation({
     mutationFn: (data: FormData) => apiRequest("POST", "/api/rota-assignments", data),
@@ -127,24 +123,21 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>US Support</FormLabel>
-                  <Select 
-                    key={`us-${usMembers.length}`}
-                    value={field.value?.toString() || ""} 
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select US team member" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
+                  <FormControl>
+                    <select 
+                      {...field}
+                      value={field.value || ""}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select US team member</option>
                       {usMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id.toString()}>
+                        <option key={member.id} value={member.id}>
                           {member.name}
-                        </SelectItem>
+                        </option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -156,24 +149,21 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>UK Support</FormLabel>
-                  <Select 
-                    key={`uk-${ukMembers.length}`}
-                    value={field.value?.toString() || ""} 
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select UK team member" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
+                  <FormControl>
+                    <select 
+                      {...field}
+                      value={field.value || ""}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select UK team member</option>
                       {ukMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id.toString()}>
+                        <option key={member.id} value={member.id}>
                           {member.name}
-                        </SelectItem>
+                        </option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
