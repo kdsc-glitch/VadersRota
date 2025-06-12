@@ -24,6 +24,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const [selectedDayAssignment, setSelectedDayAssignment] = useState<any>(null);
   const [holidayConflicts, setHolidayConflicts] = useState<Map<string, any>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [lastCheckedAssignments, setLastCheckedAssignments] = useState<string>("");
   
   // Generate calendar dates for the current week (Monday to Friday only)
   const today = new Date();
@@ -46,22 +47,32 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
 
   // Check for holiday conflicts whenever assignments change
   useEffect(() => {
+    const assignmentHash = JSON.stringify(allAssignments.map(a => `${a.id}-${a.startDate}-${a.endDate}`));
+    
+    if (assignmentHash === lastCheckedAssignments) {
+      return; // Skip if we've already checked these exact assignments
+    }
+    
+    let isCancelled = false;
+    
     const checkConflicts = async () => {
+      if (allAssignments.length === 0) {
+        setHolidayConflicts(new Map());
+        setLastCheckedAssignments("");
+        return;
+      }
+      
       const conflictMap = new Map();
       
-      console.log('Checking conflicts for assignments:', allAssignments.map(a => ({id: a.id, dates: `${a.startDate} to ${a.endDate}`})));
-      
+      // Check each assignment for conflicts
       for (const assignment of allAssignments) {
+        if (isCancelled) return;
+        
         try {
           const response: any = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
           
-          // Debug logging for any conflicts found
-          if (response.hasConflict) {
-            console.log(`Found conflict for assignment ${assignment.id} (${assignment.startDate} to ${assignment.endDate}):`, response);
-          }
-          
-          if (response.hasConflict && response.conflictingMembers && response.conflictingMembers.length > 0) {
-            // For each conflicting member, mark dates that fall within their actual holiday period
+          if (response.hasConflict && response.conflictingMembers?.length > 0) {
+            // For each conflicting member, mark the exact dates of conflict
             for (const member of response.conflictingMembers) {
               if (member.holidayStart && member.holidayEnd) {
                 const holidayStart = new Date(member.holidayStart);
@@ -69,32 +80,20 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                 const assignmentStart = new Date(assignment.startDate);
                 const assignmentEnd = new Date(assignment.endDate);
                 
-                // Find the overlap between assignment and holiday
+                // Find overlap between assignment and holiday
                 const overlapStart = new Date(Math.max(assignmentStart.getTime(), holidayStart.getTime()));
                 const overlapEnd = new Date(Math.min(assignmentEnd.getTime(), holidayEnd.getTime()));
                 
+                // Mark each overlapping date as having a conflict
                 const currentDate = new Date(overlapStart);
                 while (currentDate <= overlapEnd) {
                   const dateStr = currentDate.toISOString().split('T')[0];
-                  const existingConflict = conflictMap.get(dateStr);
                   
-                  if (existingConflict) {
-                    // Add this member to existing conflicts for this date
-                    existingConflict.conflictingMembers.push(member);
-                  } else {
-                    // Create new conflict entry for this date
-                    conflictMap.set(dateStr, {
-                      hasConflict: true,
-                      conflictingMembers: [member],
-                      assignment
-                    });
-                  }
-                  
-                  // Debug logging for June 16th specifically
-                  if (dateStr === '2025-06-16') {
-                    console.log(`Setting conflict for June 16th: ${member.name} (${member.region}) on holiday`);
-                    console.log(`Conflict map now has:`, conflictMap.get(dateStr));
-                  }
+                  conflictMap.set(dateStr, {
+                    hasConflict: true,
+                    conflictingMembers: [member],
+                    assignment
+                  });
                   
                   currentDate.setDate(currentDate.getDate() + 1);
                 }
@@ -103,18 +102,21 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           }
         } catch (error) {
           console.error("Error checking conflicts for assignment:", assignment.id, error);
-          // Continue processing other assignments even if one fails
         }
       }
       
-      console.log('Final conflict map:', conflictMap);
-      setHolidayConflicts(conflictMap);
+      if (!isCancelled) {
+        setHolidayConflicts(conflictMap);
+        setLastCheckedAssignments(assignmentHash);
+      }
     };
     
-    if (allAssignments.length > 0) {
-      checkConflicts();
-    }
-  }, [allAssignments]);
+    checkConflicts();
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [allAssignments, lastCheckedAssignments]);
 
   // Find assignment that covers this week
   const weekStartStr = startOfWeek.toISOString().split('T')[0];
