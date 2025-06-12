@@ -35,8 +35,6 @@ export function AddMemberModal({ isOpen, onClose }: AddMemberModalProps) {
       email: "",
       region: "us",
       role: "developer",
-      isAvailable: true,
-      isDsgMember: false,
     },
   });
 

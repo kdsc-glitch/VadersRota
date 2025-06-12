@@ -195,41 +195,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]> {
-    const regionMembers = await this.getTeamMembersByRegion(region);
-    
-    return regionMembers.filter(member => {
-      // Check if member is available
-      if (!member.isAvailable) return false;
-      
-      const assignmentStart = new Date(startDate);
-      const assignmentEnd = new Date(endDate);
-      
-      // Check if member is unavailable during the period
-      if (member.unavailableStart && member.unavailableEnd) {
-        const memberUnavailableStart = new Date(member.unavailableStart);
-        const memberUnavailableEnd = new Date(member.unavailableEnd);
-        
-        // Check for overlap with unavailable period
-        if (assignmentStart <= memberUnavailableEnd && assignmentEnd >= memberUnavailableStart) {
-          return false;
-        }
-      }
-      
-      // Check if member is on holiday during the period
-      if (member.holidayStart && member.holidayEnd) {
-        const memberHolidayStart = new Date(member.holidayStart);
-        const memberHolidayEnd = new Date(member.holidayEnd);
-        
-        // Check for overlap with holiday period
-        if (assignmentStart <= memberHolidayEnd && assignmentEnd >= memberHolidayStart) {
-          return false;
-        }
-      }
-      
-      return true;
-    });
-  }
+
 
   async getMemberAssignmentCount(memberId: number): Promise<number> {
     const history = await this.getRotaHistoryByMember(memberId);
@@ -241,29 +207,16 @@ export class DatabaseStorage implements IStorage {
     const assignmentStart = new Date(assignment.startDate);
     const assignmentEnd = new Date(assignment.endDate);
     
-    // Check US member
+    // Check US member holidays
     if (assignment.usMemberId) {
       const usMember = await this.getTeamMemberById(assignment.usMemberId);
       if (usMember) {
-        // Check unavailability period
-        if (usMember.unavailableStart && usMember.unavailableEnd) {
-          const unavailableStart = new Date(usMember.unavailableStart);
-          const unavailableEnd = new Date(usMember.unavailableEnd);
-          if (assignmentStart <= unavailableEnd && assignmentEnd >= unavailableStart) {
-            conflictingMembers.push(usMember);
-          }
-        }
-        
-        // Check holidays from holidays table
         const memberHolidays = await this.getHolidaysByMember(assignment.usMemberId);
         for (const holiday of memberHolidays) {
           const holidayStart = new Date(holiday.startDate);
           const holidayEnd = new Date(holiday.endDate);
           
           if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
-            // Add holiday dates to member object for frontend display
-            usMember.holidayStart = holiday.startDate;
-            usMember.holidayEnd = holiday.endDate;
             conflictingMembers.push(usMember);
             break; // Only add member once even if multiple holidays conflict
           }
@@ -271,28 +224,15 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Check UK member
+    // Check UK member holidays
     if (assignment.ukMemberId) {
       const ukMember = await this.getTeamMemberById(assignment.ukMemberId);
       if (ukMember) {
-        // Check unavailability period
-        if (ukMember.unavailableStart && ukMember.unavailableEnd) {
-          const unavailableStart = new Date(ukMember.unavailableStart);
-          const unavailableEnd = new Date(ukMember.unavailableEnd);
-          if (assignmentStart <= unavailableEnd && assignmentEnd >= unavailableStart) {
-            conflictingMembers.push(ukMember);
-          }
-        }
-        
-        // Check holidays from holidays table
         const memberHolidays = await this.getHolidaysByMember(assignment.ukMemberId);
         for (const holiday of memberHolidays) {
           const holidayStart = new Date(holiday.startDate);
           const holidayEnd = new Date(holiday.endDate);
           if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
-            // Add holiday dates to member object for frontend display
-            ukMember.holidayStart = holiday.startDate;
-            ukMember.holidayEnd = holiday.endDate;
             conflictingMembers.push(ukMember);
             break; // Only add member once even if multiple holidays conflict
           }
