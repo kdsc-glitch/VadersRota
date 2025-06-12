@@ -80,7 +80,8 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
   const updateMemberMutation = useMutation({
     mutationFn: (data: EditMemberFormData) => {
       if (!member) throw new Error("No member selected");
-      return apiRequest("PUT", `/api/team-members/${member.id}`, data);
+      console.log('Updating member with data:', data);
+      return apiRequest("PATCH", `/api/team-members/${member.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
@@ -90,10 +91,12 @@ export function EditMemberModal({ isOpen, onClose, member }: EditMemberModalProp
       });
       onClose();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Update member error:', error);
+      const errorMessage = error?.message || "Failed to update team member";
       toast({
         title: "Update Failed",
-        description: "Failed to update team member",
+        description: errorMessage,
         variant: "destructive",
       });
     },
