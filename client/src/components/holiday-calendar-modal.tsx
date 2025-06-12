@@ -74,6 +74,7 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
 
   const clearHolidayMutation = useMutation({
     mutationFn: async (memberId: number) => {
+      console.log('Clearing holiday for member:', memberId);
       return apiRequest("PATCH", `/api/team-members/${memberId}`, {
         holidayStart: null,
         holidayEnd: null,
@@ -81,16 +82,19 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
       });
     },
     onSuccess: () => {
+      console.log('Holiday cleared successfully');
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
       toast({
         title: "Holiday Cleared",
         description: "Team member is now available",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Error clearing holiday:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to clear holiday period";
       toast({
         title: "Error",
-        description: "Failed to clear holiday period",
+        description: errorMessage,
         variant: "destructive",
       });
     },
