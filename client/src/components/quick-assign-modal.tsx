@@ -52,8 +52,8 @@ export function QuickAssignModal({
     },
   });
 
-  const usMembers = teamMembers.filter(m => m.region === "us" && m.isAvailable);
-  const ukMembers = teamMembers.filter(m => m.region === "uk" && m.isAvailable);
+  const usMembers = teamMembers.filter(m => m.region === "us");
+  const ukMembers = teamMembers.filter(m => m.region === "uk");
 
   const assignMutation = useMutation({
     mutationFn: async (data: QuickAssignFormData) => {
