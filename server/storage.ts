@@ -261,20 +261,6 @@ export class DatabaseStorage implements IStorage {
           const holidayStart = new Date(holiday.startDate);
           const holidayEnd = new Date(holiday.endDate);
           
-          // Debug logging for specific dates
-          if (assignment.startDate === '2025-06-18' || assignment.endDate === '2025-06-18') {
-            console.log(`Checking June 18th assignment against holiday:`, {
-              assignmentDate: assignment.startDate,
-              holidayStart: holiday.startDate,
-              holidayEnd: holiday.endDate,
-              holidayStartParsed: holidayStart,
-              holidayEndParsed: holidayEnd,
-              assignmentStartParsed: assignmentStart,
-              assignmentEndParsed: assignmentEnd,
-              overlap: assignmentStart <= holidayEnd && assignmentEnd >= holidayStart
-            });
-          }
-          
           if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
             // Add holiday dates to member object for frontend display
             usMember.holidayStart = holiday.startDate;
