@@ -59,6 +59,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
         
         try {
           const response: any = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
+          
           if (response && response.hasConflict && response.conflictingMembers?.length > 0) {
             // Store conflict for each date in the assignment's date range
             const startDate = new Date(assignment.startDate);
@@ -74,10 +75,8 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
             }
           }
         } catch (error) {
-          // Only log errors for assignments that should have conflicts (June dates for testing)
-          if (assignment.startDate.includes('2025-06')) {
-            console.error(`Error checking conflicts for assignment ${assignment.id}:`, error);
-          }
+          // Silently handle API errors to avoid console spam
+          console.error(`Conflict check failed for assignment ${assignment.id}`);
         }
       }
       
