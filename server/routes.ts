@@ -219,6 +219,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ukAssignmentCounts.set(member.id, count);
       }
       
+      // Track rotation index for equal counts
+      let usRotationIndex = 0;
+      let ukRotationIndex = 0;
+      
       // Calculate days in the period
       const totalDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
       console.log(`Processing ${totalDays} days from ${assignmentStartDate} to ${assignmentEndDate}`);
@@ -271,28 +275,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Found ${dayUSMembers.length} US members, ${dayUKMembers.length} UK members for ${dateStr}`);
         
         if (dayUSMembers.length > 0 && dayUKMembers.length > 0) {
-          // Fair rotation selection using assignment counts and round-robin
-          const sortedUSMembers = dayUSMembers.sort((a, b) => {
-            const countA = usAssignmentCounts.get(a.id) || 0;
-            const countB = usAssignmentCounts.get(b.id) || 0;
-            if (countA !== countB) {
-              return countA - countB; // Lower count first
-            }
-            return a.id - b.id; // Consistent ordering when counts are equal
-          });
+          // Fair rotation selection using assignment counts with proper round-robin
+          const minUSCount = Math.min(...dayUSMembers.map(m => usAssignmentCounts.get(m.id) || 0));
+          const minUKCount = Math.min(...dayUKMembers.map(m => ukAssignmentCounts.get(m.id) || 0));
           
-          const sortedUKMembers = dayUKMembers.sort((a, b) => {
-            const countA = ukAssignmentCounts.get(a.id) || 0;
-            const countB = ukAssignmentCounts.get(b.id) || 0;
-            if (countA !== countB) {
-              return countA - countB; // Lower count first
-            }
-            return a.id - b.id; // Consistent ordering when counts are equal
-          });
+          // Get members with minimum assignment count
+          const eligibleUSMembers = dayUSMembers.filter(m => 
+            (usAssignmentCounts.get(m.id) || 0) === minUSCount
+          ).sort((a, b) => a.id - b.id); // Consistent ordering
           
-          // Select member with lowest assignment count
-          const selectedUSMember = sortedUSMembers[0];
-          const selectedUKMember = sortedUKMembers[0];
+          const eligibleUKMembers = dayUKMembers.filter(m => 
+            (ukAssignmentCounts.get(m.id) || 0) === minUKCount
+          ).sort((a, b) => a.id - b.id); // Consistent ordering
+          
+          // Round-robin selection within eligible members
+          const selectedUSMember = eligibleUSMembers[usRotationIndex % eligibleUSMembers.length];
+          const selectedUKMember = eligibleUKMembers[ukRotationIndex % eligibleUKMembers.length];
+          
+          usRotationIndex++;
+          ukRotationIndex++;
+          
+
           
           const dayAssignment = await storage.createRotaAssignment({
             startDate: dateStr,
