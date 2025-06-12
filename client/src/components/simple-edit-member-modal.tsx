@@ -205,13 +205,21 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
     if (!member) return;
     
     try {
+      // Helper function to format date without timezone conversion
+      const formatDateLocal = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
       // Update basic member info
       let formData = { ...data };
       
       if (holidayPeriods.length > 0) {
         const firstHoliday = holidayPeriods[0];
-        formData.holidayStart = firstHoliday.startDate.toISOString().split('T')[0];
-        formData.holidayEnd = firstHoliday.endDate.toISOString().split('T')[0];
+        formData.holidayStart = formatDateLocal(firstHoliday.startDate);
+        formData.holidayEnd = formatDateLocal(firstHoliday.endDate);
         formData.isAvailable = false;
       } else {
         (formData as any).holidayStart = null;
@@ -232,8 +240,8 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
       for (const holidayPeriod of holidayPeriods) {
         await apiRequest("POST", "/api/holidays", {
           memberId: member.id,
-          startDate: holidayPeriod.startDate.toISOString().split('T')[0],
-          endDate: holidayPeriod.endDate.toISOString().split('T')[0],
+          startDate: formatDateLocal(holidayPeriod.startDate),
+          endDate: formatDateLocal(holidayPeriod.endDate),
           description: holidayPeriod.description || null
         });
       }
