@@ -49,11 +49,18 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     const checkConflicts = async () => {
       const conflictMap = new Map();
       
+      console.log('Checking conflicts for assignments:', allAssignments.map(a => ({id: a.id, dates: `${a.startDate} to ${a.endDate}`})));
+      
       for (const assignment of allAssignments) {
         try {
           const response: any = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
           
-          if (response.hasConflict && response.conflictingMembers) {
+          // Debug logging for any conflicts found
+          if (response.hasConflict) {
+            console.log(`Found conflict for assignment ${assignment.id} (${assignment.startDate} to ${assignment.endDate}):`, response);
+          }
+          
+          if (response.hasConflict && response.conflictingMembers && response.conflictingMembers.length > 0) {
             // For each conflicting member, mark dates that fall within their actual holiday period
             for (const member of response.conflictingMembers) {
               if (member.holidayStart && member.holidayEnd) {
@@ -86,6 +93,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                   // Debug logging for June 16th specifically
                   if (dateStr === '2025-06-16') {
                     console.log(`Setting conflict for June 16th: ${member.name} (${member.region}) on holiday`);
+                    console.log(`Conflict map now has:`, conflictMap.get(dateStr));
                   }
                   
                   currentDate.setDate(currentDate.getDate() + 1);
@@ -95,6 +103,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           }
         } catch (error) {
           console.error("Error checking conflicts for assignment:", assignment.id, error);
+          // Continue processing other assignments even if one fails
         }
       }
       

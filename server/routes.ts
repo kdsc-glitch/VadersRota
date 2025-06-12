@@ -148,7 +148,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check holiday conflicts for an assignment
   app.post("/api/rota-assignments/check-conflicts", async (req, res) => {
     try {
-      const result = await storage.checkHolidayConflicts(req.body);
+      const assignment = req.body;
+      
+      // Debug logging for June 16th assignment
+      if (assignment.startDate === '2025-06-16' || assignment.endDate === '2025-06-16') {
+        console.log('Checking conflicts for June 16th assignment:', assignment);
+      }
+      
+      const result = await storage.checkHolidayConflicts(assignment);
+      
+      // Debug logging for June 16th result
+      if (assignment.startDate === '2025-06-16' || assignment.endDate === '2025-06-16') {
+        console.log('Conflict result for June 16th:', result);
+      }
+      
       res.json(result);
     } catch (error) {
       console.error('Error checking holiday conflicts:', error);
