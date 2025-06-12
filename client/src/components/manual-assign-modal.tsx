@@ -81,8 +81,16 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
           <DialogTitle>Manual Assignment</DialogTitle>
         </DialogHeader>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {teamMembers.length === 0 ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-sm text-gray-500">Loading team members...</p>
+            </div>
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
@@ -120,6 +128,7 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                 <FormItem>
                   <FormLabel>US Support</FormLabel>
                   <Select 
+                    key={`us-${usMembers.length}`}
                     value={field.value?.toString() || ""} 
                     onValueChange={(value) => field.onChange(parseInt(value))}
                   >
@@ -129,17 +138,11 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {usMembers.length > 0 ? (
-                        usMembers.map((member) => (
-                          <SelectItem key={member.id} value={member.id.toString()}>
-                            {member.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="loading" disabled>
-                          Loading US team members...
+                      {usMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id.toString()}>
+                          {member.name}
                         </SelectItem>
-                      )}
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -154,6 +157,7 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                 <FormItem>
                   <FormLabel>UK Support</FormLabel>
                   <Select 
+                    key={`uk-${ukMembers.length}`}
                     value={field.value?.toString() || ""} 
                     onValueChange={(value) => field.onChange(parseInt(value))}
                   >
@@ -163,17 +167,11 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {ukMembers.length > 0 ? (
-                        ukMembers.map((member) => (
-                          <SelectItem key={member.id} value={member.id.toString()}>
-                            {member.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="loading" disabled>
-                          Loading UK team members...
+                      {ukMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id.toString()}>
+                          {member.name}
                         </SelectItem>
-                      )}
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -209,6 +207,7 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
             </div>
           </form>
         </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
