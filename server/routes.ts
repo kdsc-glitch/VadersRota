@@ -32,15 +32,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/team-members/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log('PATCH team member request:', { id, body: req.body });
+      
       const member = await storage.updateTeamMember(id, req.body);
+      console.log('Updated member result:', member);
+      
       if (member) {
         res.json(member);
       } else {
+        console.log('Team member not found for id:', id);
         res.status(404).json({ message: "Team member not found" });
       }
     } catch (error) {
       console.error('Error updating team member:', error);
-      res.status(500).json({ message: "Failed to update team member" });
+      res.status(500).json({ message: "Failed to update team member", error: error.message });
     }
   });
 
