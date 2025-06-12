@@ -219,13 +219,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ukAssignmentCounts.set(member.id, count);
       }
       
-      // Track rotation index for equal counts
-      let usRotationIndex = 0;
-      let ukRotationIndex = 0;
-      
-      // Calculate days in the period
+      // Calculate days in the period and get all weekdays
       const totalDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
       console.log(`Processing ${totalDays} days from ${assignmentStartDate} to ${assignmentEndDate}`);
+      
+      const weekdays = [];
+      for (let dayOffset = 0; dayOffset < totalDays; dayOffset++) {
+        const currentDate = new Date(periodStart);
+        currentDate.setDate(periodStart.getDate() + dayOffset);
+        const dayOfWeek = currentDate.getDay();
+        
+        // Only include weekdays (Monday-Friday)
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+          weekdays.push(currentDate.toISOString().split('T')[0]);
+        }
+      }
+      
+      console.log(`Week contains ${weekdays.length} weekdays:`, weekdays);
       
       // Helper function to check if member is available on a specific date
       const isMemberAvailable = (member: any, dateStr: string): boolean => {
@@ -254,55 +264,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true;
       };
       
-      for (let dayOffset = 0; dayOffset < totalDays; dayOffset++) {
-        const currentDate = new Date(periodStart);
-        currentDate.setDate(periodStart.getDate() + dayOffset);
-        const dateStr = currentDate.toISOString().split('T')[0];
+      // Check if member is available for ALL days in the week
+      const isMemberAvailableForFullWeek = (member: any): boolean => {
+        return weekdays.every(dateStr => isMemberAvailable(member, dateStr));
+      };
+      
+      // Try to find members who can cover the full week first
+      console.log("Checking full week availability for all members...");
+      const fullWeekUSMembers = allUSMembers.filter(member => {
+        const available = isMemberAvailableForFullWeek(member);
+        console.log(`US member ${member.name}: available for full week = ${available}`);
+        return available;
+      });
+      const fullWeekUKMembers = allUKMembers.filter(member => {
+        const available = isMemberAvailableForFullWeek(member);
+        console.log(`UK member ${member.name}: available for full week = ${available}`);
+        return available;
+      });
+      
+      let selectedUSMember = null;
+      let selectedUKMember = null;
+      
+      if (fullWeekUSMembers.length > 0 && fullWeekUKMembers.length > 0) {
+        console.log(`Found ${fullWeekUSMembers.length} US and ${fullWeekUKMembers.length} UK members available for full week`);
         
-        // Skip weekends (Saturday = 6, Sunday = 0) - only process Monday-Friday
-        const dayOfWeek = currentDate.getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-          console.log(`Skipping weekend day: ${dateStr}`);
-          continue;
-        }
+        // Select members with lowest assignment count for full week coverage
+        const minUSCount = Math.min(...fullWeekUSMembers.map(m => usAssignmentCounts.get(m.id) || 0));
+        const minUKCount = Math.min(...fullWeekUKMembers.map(m => ukAssignmentCounts.get(m.id) || 0));
         
-        console.log(`Processing weekday: ${dateStr}`);
+        const eligibleUSMembers = fullWeekUSMembers.filter(m => 
+          (usAssignmentCounts.get(m.id) || 0) === minUSCount
+        ).sort((a, b) => a.id - b.id);
         
-        // Filter available members for this specific day
-        const dayUSMembers = allUSMembers.filter(member => isMemberAvailable(member, dateStr));
-        const dayUKMembers = allUKMembers.filter(member => isMemberAvailable(member, dateStr));
+        const eligibleUKMembers = fullWeekUKMembers.filter(m => 
+          (ukAssignmentCounts.get(m.id) || 0) === minUKCount
+        ).sort((a, b) => a.id - b.id);
         
-        console.log(`Found ${dayUSMembers.length} US members, ${dayUKMembers.length} UK members for ${dateStr}`);
+        selectedUSMember = eligibleUSMembers[0];
+        selectedUKMember = eligibleUKMembers[0];
         
-        if (dayUSMembers.length > 0 && dayUKMembers.length > 0) {
-          // Fair rotation selection using assignment counts with proper round-robin
-          const minUSCount = Math.min(...dayUSMembers.map(m => usAssignmentCounts.get(m.id) || 0));
-          const minUKCount = Math.min(...dayUKMembers.map(m => ukAssignmentCounts.get(m.id) || 0));
-          
-          // Get members with minimum assignment count
-          const eligibleUSMembers = dayUSMembers.filter(m => 
-            (usAssignmentCounts.get(m.id) || 0) === minUSCount
-          ).sort((a, b) => a.id - b.id); // Consistent ordering
-          
-          const eligibleUKMembers = dayUKMembers.filter(m => 
-            (ukAssignmentCounts.get(m.id) || 0) === minUKCount
-          ).sort((a, b) => a.id - b.id); // Consistent ordering
-          
-          // Round-robin selection within eligible members
-          const selectedUSMember = eligibleUSMembers[usRotationIndex % eligibleUSMembers.length];
-          const selectedUKMember = eligibleUKMembers[ukRotationIndex % eligibleUKMembers.length];
-          
-          usRotationIndex++;
-          ukRotationIndex++;
-          
-
-          
+        console.log(`Selected for full week - US: ${selectedUSMember.name}, UK: ${selectedUKMember.name}`);
+        
+        // Assign the same members for all days in the week
+        for (const dateStr of weekdays) {
           const dayAssignment = await storage.createRotaAssignment({
             startDate: dateStr,
             endDate: dateStr,
             usMemberId: selectedUSMember.id,
             ukMemberId: selectedUKMember.id,
-            notes: "Auto-assigned (partial week)",
+            notes: "Auto-assigned (full week)",
             isManual: false,
           });
           
@@ -327,19 +337,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
             startDate: dateStr,
             endDate: dateStr,
           });
+        }
+        
+        // Update assignment counts (once per week, not per day)
+        usAssignmentCounts.set(selectedUSMember.id, (usAssignmentCounts.get(selectedUSMember.id) || 0) + weekdays.length);
+        ukAssignmentCounts.set(selectedUKMember.id, (ukAssignmentCounts.get(selectedUKMember.id) || 0) + weekdays.length);
+        
+      } else {
+        console.log("No members available for full week - falling back to day-by-day assignment");
+        
+        // Fall back to day-by-day assignment when no one can cover the full week
+        let usRotationIndex = 0;
+        let ukRotationIndex = 0;
+        
+        for (const dateStr of weekdays) {
+          console.log(`Processing weekday: ${dateStr}`);
           
-          // Update assignment counts for fair rotation tracking
-          usAssignmentCounts.set(selectedUSMember.id, (usAssignmentCounts.get(selectedUSMember.id) || 0) + 1);
-          ukAssignmentCounts.set(selectedUKMember.id, (ukAssignmentCounts.get(selectedUKMember.id) || 0) + 1);
-        } else {
-          const reasonUS = dayUSMembers.length === 0 ? "No US members available" : "";
-          const reasonUK = dayUKMembers.length === 0 ? "No UK members available" : "";
-          const reason = [reasonUS, reasonUK].filter(r => r).join(", ");
+          // Filter available members for this specific day
+          const dayUSMembers = allUSMembers.filter(member => isMemberAvailable(member, dateStr));
+          const dayUKMembers = allUKMembers.filter(member => isMemberAvailable(member, dateStr));
           
-          skippedDays.push({
-            date: dateStr,
-            reason: reason
-          });
+          console.log(`Found ${dayUSMembers.length} US members, ${dayUKMembers.length} UK members for ${dateStr}`);
+          
+          if (dayUSMembers.length > 0 && dayUKMembers.length > 0) {
+            // Fair rotation selection using assignment counts with proper round-robin
+            const minUSCount = Math.min(...dayUSMembers.map(m => usAssignmentCounts.get(m.id) || 0));
+            const minUKCount = Math.min(...dayUKMembers.map(m => ukAssignmentCounts.get(m.id) || 0));
+            
+            // Get members with minimum assignment count
+            const eligibleUSMembers = dayUSMembers.filter(m => 
+              (usAssignmentCounts.get(m.id) || 0) === minUSCount
+            ).sort((a, b) => a.id - b.id); // Consistent ordering
+            
+            const eligibleUKMembers = dayUKMembers.filter(m => 
+              (ukAssignmentCounts.get(m.id) || 0) === minUKCount
+            ).sort((a, b) => a.id - b.id); // Consistent ordering
+            
+            // Round-robin selection within eligible members
+            const dayUSMember = eligibleUSMembers[usRotationIndex % eligibleUSMembers.length];
+            const dayUKMember = eligibleUKMembers[ukRotationIndex % eligibleUKMembers.length];
+            
+            usRotationIndex++;
+            ukRotationIndex++;
+            
+            const dayAssignment = await storage.createRotaAssignment({
+              startDate: dateStr,
+              endDate: dateStr,
+              usMemberId: dayUSMember.id,
+              ukMemberId: dayUKMember.id,
+              notes: "Auto-assigned (partial week)",
+              isManual: false,
+            });
+            
+            assignments.push({
+              date: dateStr,
+              usMembers: dayUSMember.name,
+              ukMember: dayUKMember.name
+            });
+            
+            await storage.createRotaHistory({
+              assignmentId: dayAssignment.id,
+              memberId: dayUSMember.id,
+              region: "us",
+              startDate: dateStr,
+              endDate: dateStr,
+            });
+            
+            await storage.createRotaHistory({
+              assignmentId: dayAssignment.id,
+              memberId: dayUKMember.id,
+              region: "uk",
+              startDate: dateStr,
+              endDate: dateStr,
+            });
+            
+            // Update assignment counts for fair rotation tracking
+            usAssignmentCounts.set(dayUSMember.id, (usAssignmentCounts.get(dayUSMember.id) || 0) + 1);
+            ukAssignmentCounts.set(dayUKMember.id, (ukAssignmentCounts.get(dayUKMember.id) || 0) + 1);
+          } else {
+            const reasonUS = dayUSMembers.length === 0 ? "No US members available" : "";
+            const reasonUK = dayUKMembers.length === 0 ? "No UK members available" : "";
+            const reason = [reasonUS, reasonUK].filter(r => r).join(", ");
+            
+            skippedDays.push({
+              date: dateStr,
+              reason: reason
+            });
+          }
         }
       }
       
