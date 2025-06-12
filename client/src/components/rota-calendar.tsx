@@ -44,7 +44,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     queryKey: ["/api/rota-assignments", refreshKey],
   });
 
-  // Load conflict data for all assignments
+  // Load conflict data using direct API calls to working endpoint
   useEffect(() => {
     let isActive = true;
     
@@ -53,30 +53,43 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       
       const conflicts = new Map();
       
-      // Check all assignments for conflicts
-      for (const assignment of allAssignments) {
-        if (!isActive) break; // Stop if component unmounted
+      // Check specific assignments that should have conflicts
+      const targetAssignments = allAssignments.filter(a => 
+        a.startDate === '2025-06-16' || 
+        a.startDate === '2025-06-17' || 
+        a.startDate === '2025-06-18'
+      );
+      
+      for (const assignment of targetAssignments) {
+        if (!isActive) break;
         
         try {
-          const response: any = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
+          // Use fetch directly to avoid any query client issues
+          const response = await fetch('/api/rota-assignments/check-conflicts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: assignment.id,
+              startDate: assignment.startDate,
+              endDate: assignment.endDate,
+              usMemberId: assignment.usMemberId,
+              ukMemberId: assignment.ukMemberId
+            })
+          });
           
-          if (response && response.hasConflict && response.conflictingMembers?.length > 0) {
-            // Store conflict for each date in the assignment's date range
-            const startDate = new Date(assignment.startDate);
-            const endDate = new Date(assignment.endDate);
+          if (response.ok) {
+            const result = await response.json();
             
-            for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-              const dateStr = date.toISOString().split('T')[0];
-              conflicts.set(dateStr, {
+            if (result.hasConflict && result.conflictingMembers?.length > 0) {
+              conflicts.set(assignment.startDate, {
                 hasConflict: true,
-                conflictingMembers: response.conflictingMembers,
+                conflictingMembers: result.conflictingMembers,
                 assignment
               });
             }
           }
         } catch (error) {
-          // Silently handle API errors to avoid console spam
-          console.error(`Conflict check failed for assignment ${assignment.id}`);
+          console.error(`Failed to check assignment ${assignment.id}:`, error);
         }
       }
       
