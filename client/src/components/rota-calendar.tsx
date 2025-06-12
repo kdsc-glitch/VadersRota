@@ -53,8 +53,8 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
         try {
           const response: any = await apiRequest("POST", "/api/rota-assignments/check-conflicts", assignment);
           
-          if (response.hasConflict) {
-            // For each conflicting member, only mark dates that fall within their actual holiday period
+          if (response.hasConflict && response.conflictingMembers) {
+            // For each conflicting member, mark dates that fall within their actual holiday period
             for (const member of response.conflictingMembers) {
               if (member.holidayStart && member.holidayEnd) {
                 const holidayStart = new Date(member.holidayStart);
@@ -69,11 +69,25 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                 const currentDate = new Date(overlapStart);
                 while (currentDate <= overlapEnd) {
                   const dateStr = currentDate.toISOString().split('T')[0];
-                  conflictMap.set(dateStr, {
-                    hasConflict: true,
-                    conflictingMembers: [member], // Only include the member for this specific date
-                    assignment
-                  });
+                  const existingConflict = conflictMap.get(dateStr);
+                  
+                  if (existingConflict) {
+                    // Add this member to existing conflicts for this date
+                    existingConflict.conflictingMembers.push(member);
+                  } else {
+                    // Create new conflict entry for this date
+                    conflictMap.set(dateStr, {
+                      hasConflict: true,
+                      conflictingMembers: [member],
+                      assignment
+                    });
+                  }
+                  
+                  // Debug logging for June 16th specifically
+                  if (dateStr === '2025-06-16') {
+                    console.log(`Setting conflict for June 16th: ${member.name} (${member.region}) on holiday`);
+                  }
+                  
                   currentDate.setDate(currentDate.getDate() + 1);
                 }
               }
@@ -83,6 +97,8 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           console.error("Error checking conflicts for assignment:", assignment.id, error);
         }
       }
+      
+      console.log('Final conflict map:', conflictMap);
       setHolidayConflicts(conflictMap);
     };
     
@@ -465,13 +481,14 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
               const isAssigned = !!dayUSMember;
               const dateStr = date.toISOString().split('T')[0];
               const conflict = holidayConflicts.get(dateStr);
-              const hasUSConflict = conflict && conflict.conflictingMembers.some((m: any) => m.region === 'us');
+              const hasUSConflict = conflict && conflict.hasConflict && conflict.conflictingMembers.some((m: any) => m.region === 'us');
               
-              // Debug logging for June 13th
-              if (dateStr === '2025-06-13') {
-                console.log('June 13th - Conflict data:', conflict);
-                console.log('June 13th - Has US conflict:', hasUSConflict);
-                console.log('June 13th - US Member:', dayUSMember);
+              // Debug logging for June 16th conflict
+              if (dateStr === '2025-06-16') {
+                console.log('June 16th - Conflict data:', conflict);
+                console.log('June 16th - Has US conflict:', hasUSConflict);
+                console.log('June 16th - US Member:', dayUSMember);
+                console.log('June 16th - Assignment for this date:', getDayAssignment(date));
               }
               
               return (
