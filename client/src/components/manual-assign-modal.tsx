@@ -45,6 +45,10 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
 
   const usMembers = teamMembers.filter(m => m.region === "us");
   const ukMembers = teamMembers.filter(m => m.region === "uk");
+  
+  console.log("Manual assign modal - teamMembers:", teamMembers);
+  console.log("Manual assign modal - usMembers:", usMembers);
+  console.log("Manual assign modal - ukMembers:", ukMembers);
 
   const assignMutation = useMutation({
     mutationFn: (data: FormData) => apiRequest("POST", "/api/rota-assignments", data),
