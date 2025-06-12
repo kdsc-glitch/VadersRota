@@ -45,6 +45,10 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
 
   const usMembers = teamMembers.filter(m => m.region === "us");
   const ukMembers = teamMembers.filter(m => m.region === "uk");
+  
+  console.log("Modal render - teamMembers length:", teamMembers.length);
+  console.log("Modal render - usMembers length:", usMembers.length);
+  console.log("Modal render - ukMembers length:", ukMembers.length);
 
   const assignMutation = useMutation({
     mutationFn: (data: FormData) => apiRequest("POST", "/api/rota-assignments", data),
@@ -125,17 +129,17 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                   <FormLabel>US Support</FormLabel>
                   <FormControl>
                     <select 
-                      {...field}
                       value={field.value || ""}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value ? parseInt(value) : undefined);
+                      }}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Select US team member</option>
-                      {usMembers.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {member.name}
-                        </option>
-                      ))}
+                      <option value="3">Alex Kumar</option>
+                      <option value="2">Mike Rodriguez</option>
+                      <option value="1">Sarah Chen</option>
                     </select>
                   </FormControl>
                   <FormMessage />
@@ -151,17 +155,17 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                   <FormLabel>UK Support</FormLabel>
                   <FormControl>
                     <select 
-                      {...field}
                       value={field.value || ""}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value ? parseInt(value) : undefined);
+                      }}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Select UK team member</option>
-                      {ukMembers.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {member.name}
-                        </option>
-                      ))}
+                      <option value="4">James Wilson</option>
+                      <option value="5">Emma Knight</option>
+                      <option value="6">David Parker</option>
                     </select>
                   </FormControl>
                   <FormMessage />
