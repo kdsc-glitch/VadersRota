@@ -126,9 +126,20 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
   };
 
   const onSubmit = (data: HolidayFormData) => {
+    console.log('=== HOLIDAY FORM SUBMISSION ===');
     console.log('Submitting holiday data:', data);
     console.log('Form errors:', form.formState.errors);
     console.log('Form values:', form.getValues());
+    console.log('Form is valid:', form.formState.isValid);
+    console.log('Form is submitting:', form.formState.isSubmitting);
+    
+    // Validate data before mutation
+    const validation = holidaySchema.safeParse(data);
+    if (!validation.success) {
+      console.error('Validation failed:', validation.error);
+      return;
+    }
+    
     updateHolidayMutation.mutate(data);
   };
 
@@ -338,7 +349,14 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
               <CardContent className="p-4">
                 <h3 className="text-sm font-medium text-slate-900 mb-3">Set New Holiday Period</h3>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <form 
+                    onSubmit={(e) => {
+                      console.log('Form submit event triggered');
+                      e.preventDefault();
+                      form.handleSubmit(onSubmit)(e);
+                    }} 
+                    className="space-y-4"
+                  >
                     <FormField
                       control={form.control}
                       name="memberId"
