@@ -34,7 +34,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       console.log('PATCH team member request:', { id, body: req.body });
       
-      const member = await storage.updateTeamMember(id, req.body);
+      // Fix timezone offset issue for holiday dates
+      const updates = { ...req.body };
+      if (updates.holidayStart && typeof updates.holidayStart === 'string') {
+        // Ensure date is treated as local date without timezone conversion
+        updates.holidayStart = updates.holidayStart.split('T')[0]; // Keep only YYYY-MM-DD part
+      }
+      if (updates.holidayEnd && typeof updates.holidayEnd === 'string') {
+        // Ensure date is treated as local date without timezone conversion
+        updates.holidayEnd = updates.holidayEnd.split('T')[0]; // Keep only YYYY-MM-DD part
+      }
+      
+      const member = await storage.updateTeamMember(id, updates);
       console.log('Updated member result:', member);
       
       if (member) {
@@ -507,7 +518,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create holiday
   app.post("/api/holidays", async (req, res) => {
     try {
-      const holiday = await storage.createHoliday(req.body);
+      // Fix timezone offset issue for holiday dates
+      const holidayData = { ...req.body };
+      if (holidayData.startDate && typeof holidayData.startDate === 'string') {
+        holidayData.startDate = holidayData.startDate.split('T')[0]; // Keep only YYYY-MM-DD part
+      }
+      if (holidayData.endDate && typeof holidayData.endDate === 'string') {
+        holidayData.endDate = holidayData.endDate.split('T')[0]; // Keep only YYYY-MM-DD part
+      }
+      
+      const holiday = await storage.createHoliday(holidayData);
       res.status(201).json(holiday);
     } catch (error) {
       console.error('Error creating holiday:', error);

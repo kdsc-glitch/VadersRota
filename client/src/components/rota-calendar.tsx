@@ -24,6 +24,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const [selectedDayAssignment, setSelectedDayAssignment] = useState<any>(null);
   const [holidayConflicts, setHolidayConflicts] = useState<Map<string, any>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [holidayRefreshKey, setHolidayRefreshKey] = useState(0);
   
   // Generate calendar dates for the current week (Monday to Friday only)
   const today = new Date();
@@ -130,7 +131,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     return () => {
       isActive = false;
     };
-  }, [allAssignments.length, refreshKey, startOfWeek.getMonth(), startOfWeek.getFullYear()]);
+  }, [allAssignments.length, refreshKey, holidayRefreshKey, startOfWeek.getMonth(), startOfWeek.getFullYear()]);
 
   // Find assignment that covers this week
   const weekStartStr = startOfWeek.toISOString().split('T')[0];
