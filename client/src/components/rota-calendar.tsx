@@ -57,7 +57,8 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       const targetAssignments = allAssignments.filter(a => 
         a.startDate === '2025-06-16' || 
         a.startDate === '2025-06-17' || 
-        a.startDate === '2025-06-18'
+        a.startDate === '2025-06-18' ||
+        a.startDate === '2025-06-19'
       );
       
       for (const assignment of targetAssignments) {

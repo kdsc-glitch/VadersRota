@@ -150,24 +150,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const assignment = req.body;
       
-      // Debug logging for June assignments
-      if (assignment.startDate && assignment.startDate.includes('2025-06-1')) {
-        console.log(`API received assignment ${assignment.id}:`, assignment);
-        console.log(`US Member ID: ${assignment.usMemberId}, UK Member ID: ${assignment.ukMemberId}`);
-      }
-      
       // Validate required fields
       if (!assignment.usMemberId && !assignment.ukMemberId) {
         return res.json({ hasConflict: false, conflictingMembers: [] });
       }
       
       const result = await storage.checkHolidayConflicts(assignment);
-      
-      // Debug logging for June assignments
-      if (assignment.startDate && assignment.startDate.includes('2025-06-1')) {
-        console.log(`Conflict result for assignment ${assignment.id}:`, result);
-      }
-      
       res.json(result);
     } catch (error) {
       console.error('Error checking holiday conflicts:', error);
