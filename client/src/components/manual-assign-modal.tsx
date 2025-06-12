@@ -16,8 +16,8 @@ import type { TeamMember } from "@shared/schema";
 const formSchema = insertRotaAssignmentSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
-  usMemberId: z.number().min(1, "Please select a US team member"),
-  ukMemberId: z.number().min(1, "Please select a UK team member"),
+  usMemberId: z.number().optional().refine(val => val && val > 0, "Please select a US team member"),
+  ukMemberId: z.number().optional().refine(val => val && val > 0, "Please select a UK team member"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -36,8 +36,6 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
     defaultValues: {
       startDate: "",
       endDate: "",
-      usMemberId: undefined,
-      ukMemberId: undefined,
       notes: "",
       isManual: true,
     },
