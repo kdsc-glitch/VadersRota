@@ -195,7 +195,10 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
   };
 
   const removeHolidayPeriod = (id: string) => {
-    setHolidayPeriods(holidayPeriods.filter(h => h.id !== id));
+    console.log('Removing holiday period:', id);
+    const updatedPeriods = holidayPeriods.filter(h => h.id !== id);
+    console.log('Updated holiday periods:', updatedPeriods);
+    setHolidayPeriods(updatedPeriods);
   };
 
   const onSubmit = async (data: EditMemberFormData) => {
@@ -209,9 +212,11 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
         const firstHoliday = holidayPeriods[0];
         formData.holidayStart = firstHoliday.startDate.toISOString().split('T')[0];
         formData.holidayEnd = firstHoliday.endDate.toISOString().split('T')[0];
+        formData.isAvailable = false;
       } else {
-        formData.holidayStart = undefined;
-        formData.holidayEnd = undefined;
+        (formData as any).holidayStart = null;
+        (formData as any).holidayEnd = null;
+        formData.isAvailable = true;
       }
 
       // Save member info first
