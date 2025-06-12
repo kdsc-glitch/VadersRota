@@ -16,7 +16,7 @@ import { useState } from "react";
 import type { TeamMember } from "@shared/schema";
 
 const holidaySchema = z.object({
-  memberId: z.number().min(1, "Please select a team member"),
+  memberId: z.coerce.number().min(1, "Please select a team member"),
   holidayStart: z.string().min(1, "Start date is required"),
   holidayEnd: z.string().min(1, "End date is required"),
 }).refine((data) => {
@@ -56,11 +56,14 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
 
   const updateHolidayMutation = useMutation({
     mutationFn: async (data: HolidayFormData) => {
-      return apiRequest("PATCH", `/api/team-members/${data.memberId}`, {
+      console.log('Making API request with data:', data);
+      const payload = {
         holidayStart: data.holidayStart,
         holidayEnd: data.holidayEnd,
         isAvailable: false,
-      });
+      };
+      console.log('API payload:', payload);
+      return apiRequest("PATCH", `/api/team-members/${data.memberId}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
@@ -75,10 +78,12 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
       });
       setShowAddForm(false);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Holiday update mutation error:', error);
+      const errorMessage = error?.message || "Failed to update holiday period";
       toast({
         title: "Error",
-        description: "Failed to update holiday period",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -122,6 +127,8 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
 
   const onSubmit = (data: HolidayFormData) => {
     console.log('Submitting holiday data:', data);
+    console.log('Form errors:', form.formState.errors);
+    console.log('Form values:', form.getValues());
     updateHolidayMutation.mutate(data);
   };
 
