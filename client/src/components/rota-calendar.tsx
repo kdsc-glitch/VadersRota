@@ -44,7 +44,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     queryKey: ["/api/rota-assignments", refreshKey],
   });
 
-  // Load conflict data using direct API calls to working endpoint
+  // Load conflict data for ALL assignments to detect any holiday conflicts
   useEffect(() => {
     let isActive = true;
     
@@ -53,19 +53,12 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       
       const conflicts = new Map();
       
-      // Check specific assignments that should have conflicts
-      const targetAssignments = allAssignments.filter(a => 
-        a.startDate === '2025-06-16' || 
-        a.startDate === '2025-06-17' || 
-        a.startDate === '2025-06-18' ||
-        a.startDate === '2025-06-19'
-      );
-      
-      for (const assignment of targetAssignments) {
+      // Check ALL assignments for potential conflicts, not just specific dates
+      for (const assignment of allAssignments) {
         if (!isActive) break;
         
         try {
-          // Use fetch directly to avoid any query client issues
+          // Use fetch directly to check each assignment for conflicts
           const response = await fetch('/api/rota-assignments/check-conflicts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -96,7 +89,10 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       
       if (isActive) {
         setHolidayConflicts(conflicts);
-        console.log(`Loaded conflicts for ${conflicts.size} dates`);
+        console.log(`Loaded conflicts for ${conflicts.size} dates out of ${allAssignments.length} total assignments`);
+        if (conflicts.size > 0) {
+          console.log('Conflicted dates:', Array.from(conflicts.keys()));
+        }
       }
     };
     
