@@ -19,6 +19,14 @@ const holidaySchema = z.object({
   memberId: z.number().min(1, "Please select a team member"),
   holidayStart: z.string().min(1, "Start date is required"),
   holidayEnd: z.string().min(1, "End date is required"),
+}).refine((data) => {
+  if (data.holidayStart && data.holidayEnd) {
+    return new Date(data.holidayStart) <= new Date(data.holidayEnd);
+  }
+  return true;
+}, {
+  message: "End date must be after or equal to start date",
+  path: ["holidayEnd"],
 });
 
 type HolidayFormData = z.infer<typeof holidaySchema>;
@@ -60,7 +68,11 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
         title: "Holiday Updated",
         description: "Team member holiday period has been set",
       });
-      form.reset();
+      form.reset({
+        memberId: 0,
+        holidayStart: "",
+        holidayEnd: "",
+      });
       setShowAddForm(false);
     },
     onError: () => {
@@ -100,7 +112,16 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
     },
   });
 
+  // Helper function to format date for HTML date input (YYYY-MM-DD)
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const onSubmit = (data: HolidayFormData) => {
+    console.log('Submitting holiday data:', data);
     updateHolidayMutation.mutate(data);
   };
 
@@ -290,6 +311,20 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
             </div>
           )}
           
+          {/* Add Holiday Button */}
+          {!showAddForm && (
+            <div className="text-center">
+              <Button
+                onClick={() => setShowAddForm(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Holiday Period
+              </Button>
+            </div>
+          )}
+          
           {/* Add Holiday Form - Collapsible */}
           {showAddForm && (
             <Card className="border-blue-200 bg-blue-50">
@@ -330,7 +365,11 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
                           <FormItem>
                             <FormLabel>Start Date</FormLabel>
                             <FormControl>
-                              <Input type="date" {...field} />
+                              <Input 
+                                type="date" 
+                                {...field}
+                                min={formatDateForInput(new Date())}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -344,7 +383,11 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
                           <FormItem>
                             <FormLabel>End Date</FormLabel>
                             <FormControl>
-                              <Input type="date" {...field} />
+                              <Input 
+                                type="date" 
+                                {...field}
+                                min={form.watch("holidayStart") || formatDateForInput(new Date())}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
