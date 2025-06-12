@@ -26,6 +26,11 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
   const [refreshKey, setRefreshKey] = useState(0);
   const [holidayRefreshKey, setHolidayRefreshKey] = useState(0);
   
+  // Function to trigger holiday refresh when holidays are updated
+  const refreshHolidayConflicts = () => {
+    setHolidayRefreshKey(prev => prev + 1);
+  };
+  
   // Generate calendar dates for the current week (Monday to Friday only)
   const today = new Date();
   const startOfWeek = new Date(today);
