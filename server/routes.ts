@@ -270,17 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Try to find members who can cover the full week first
-      console.log("Checking full week availability for all members...");
-      const fullWeekUSMembers = allUSMembers.filter(member => {
-        const available = isMemberAvailableForFullWeek(member);
-        console.log(`US member ${member.name}: available for full week = ${available}`);
-        return available;
-      });
-      const fullWeekUKMembers = allUKMembers.filter(member => {
-        const available = isMemberAvailableForFullWeek(member);
-        console.log(`UK member ${member.name}: available for full week = ${available}`);
-        return available;
-      });
+      const fullWeekUSMembers = allUSMembers.filter(isMemberAvailableForFullWeek);
+      const fullWeekUKMembers = allUKMembers.filter(isMemberAvailableForFullWeek);
       
       let selectedUSMember = null;
       let selectedUKMember = null;
@@ -303,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedUSMember = eligibleUSMembers[0];
         selectedUKMember = eligibleUKMembers[0];
         
-        console.log(`Selected for full week - US: ${selectedUSMember.name}, UK: ${selectedUKMember.name}`);
+
         
         // Assign the same members for all days in the week
         for (const dateStr of weekdays) {
