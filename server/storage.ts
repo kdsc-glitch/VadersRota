@@ -239,14 +239,13 @@ export class DatabaseStorage implements IStorage {
 
   async checkHolidayConflicts(assignment: RotaAssignment): Promise<{hasConflict: boolean, conflictingMembers: TeamMember[]}> {
     const conflictingMembers: TeamMember[] = [];
+    const assignmentStart = new Date(assignment.startDate);
+    const assignmentEnd = new Date(assignment.endDate);
     
     // Check US member
     if (assignment.usMemberId) {
       const usMember = await this.getTeamMemberById(assignment.usMemberId);
       if (usMember) {
-        const assignmentStart = new Date(assignment.startDate);
-        const assignmentEnd = new Date(assignment.endDate);
-        
         // Check unavailability period
         if (usMember.unavailableStart && usMember.unavailableEnd) {
           const unavailableStart = new Date(usMember.unavailableStart);
@@ -256,12 +255,32 @@ export class DatabaseStorage implements IStorage {
           }
         }
         
-        // Check holiday period
-        if (usMember.holidayStart && usMember.holidayEnd) {
-          const holidayStart = new Date(usMember.holidayStart);
-          const holidayEnd = new Date(usMember.holidayEnd);
+        // Check holidays from holidays table
+        const memberHolidays = await this.getHolidaysByMember(assignment.usMemberId);
+        for (const holiday of memberHolidays) {
+          const holidayStart = new Date(holiday.startDate);
+          const holidayEnd = new Date(holiday.endDate);
+          
+          // Debug logging for specific dates
+          if (assignment.startDate === '2025-06-18' || assignment.endDate === '2025-06-18') {
+            console.log(`Checking June 18th assignment against holiday:`, {
+              assignmentDate: assignment.startDate,
+              holidayStart: holiday.startDate,
+              holidayEnd: holiday.endDate,
+              holidayStartParsed: holidayStart,
+              holidayEndParsed: holidayEnd,
+              assignmentStartParsed: assignmentStart,
+              assignmentEndParsed: assignmentEnd,
+              overlap: assignmentStart <= holidayEnd && assignmentEnd >= holidayStart
+            });
+          }
+          
           if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+            // Add holiday dates to member object for frontend display
+            usMember.holidayStart = holiday.startDate;
+            usMember.holidayEnd = holiday.endDate;
             conflictingMembers.push(usMember);
+            break; // Only add member once even if multiple holidays conflict
           }
         }
       }
@@ -271,9 +290,6 @@ export class DatabaseStorage implements IStorage {
     if (assignment.ukMemberId) {
       const ukMember = await this.getTeamMemberById(assignment.ukMemberId);
       if (ukMember) {
-        const assignmentStart = new Date(assignment.startDate);
-        const assignmentEnd = new Date(assignment.endDate);
-        
         // Check unavailability period
         if (ukMember.unavailableStart && ukMember.unavailableEnd) {
           const unavailableStart = new Date(ukMember.unavailableStart);
@@ -283,12 +299,17 @@ export class DatabaseStorage implements IStorage {
           }
         }
         
-        // Check holiday period
-        if (ukMember.holidayStart && ukMember.holidayEnd) {
-          const holidayStart = new Date(ukMember.holidayStart);
-          const holidayEnd = new Date(ukMember.holidayEnd);
+        // Check holidays from holidays table
+        const memberHolidays = await this.getHolidaysByMember(assignment.ukMemberId);
+        for (const holiday of memberHolidays) {
+          const holidayStart = new Date(holiday.startDate);
+          const holidayEnd = new Date(holiday.endDate);
           if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+            // Add holiday dates to member object for frontend display
+            ukMember.holidayStart = holiday.startDate;
+            ukMember.holidayEnd = holiday.endDate;
             conflictingMembers.push(ukMember);
+            break; // Only add member once even if multiple holidays conflict
           }
         }
       }
