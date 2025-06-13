@@ -26,7 +26,7 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
   const [loadingStageTeam, setLoadingStageTeam] = useState<string>("");
   
   // Fetch holidays data to check current status
-  const { data: holidays = [] } = useQuery({
+  const { data: holidays = [] } = useQuery<any[]>({
     queryKey: ["/api/holidays"],
   });
   

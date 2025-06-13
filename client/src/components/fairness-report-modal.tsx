@@ -10,7 +10,6 @@ interface FairnessReportData {
   name: string;
   region: string;
   assignmentCount: number;
-  isAvailable: boolean;
 }
 
 interface FairnessReportModalProps {
@@ -120,8 +119,8 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="w-4 h-4 text-blue-600" />
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <User className="w-5 h-5 text-blue-600" />
                           </div>
                           <div>
                             <p className="text-sm font-medium text-slate-900">{member.name}</p>
@@ -131,11 +130,6 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {!member.isAvailable && (
-                            <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                              On Holiday
-                            </Badge>
-                          )}
                           {getAssignmentBadge(level)}
                         </div>
                       </div>
@@ -145,8 +139,9 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
                           <div
                             className={`h-2 rounded-full ${
                               level === "high" ? "bg-red-500" :
-                              level === "medium" ? "bg-amber-500" :
+                              level === "above-average" ? "bg-orange-500" :
                               level === "low" ? "bg-blue-500" :
+                              level === "below-average" ? "bg-slate-500" :
                               "bg-green-500"
                             }`}
                             style={{
@@ -176,8 +171,8 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="w-4 h-4 text-blue-600" />
+                          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                            <User className="w-5 h-5 text-purple-600" />
                           </div>
                           <div>
                             <p className="text-sm font-medium text-slate-900">{member.name}</p>
@@ -187,11 +182,6 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {!member.isAvailable && (
-                            <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                              On Holiday
-                            </Badge>
-                          )}
                           {getAssignmentBadge(level)}
                         </div>
                       </div>
@@ -201,8 +191,9 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
                           <div
                             className={`h-2 rounded-full ${
                               level === "high" ? "bg-red-500" :
-                              level === "medium" ? "bg-amber-500" :
+                              level === "above-average" ? "bg-orange-500" :
                               level === "low" ? "bg-blue-500" :
+                              level === "below-average" ? "bg-slate-500" :
                               "bg-green-500"
                             }`}
                             style={{
@@ -218,9 +209,9 @@ export function FairnessReportModal({ isOpen, onClose }: FairnessReportModalProp
             </div>
           </div>
 
-          {/* Action Button */}
-          <div className="flex justify-end">
-            <Button onClick={onClose}>
+          {/* Actions */}
+          <div className="flex justify-end pt-4 border-t border-slate-200">
+            <Button onClick={onClose} variant="outline">
               Close Report
             </Button>
           </div>

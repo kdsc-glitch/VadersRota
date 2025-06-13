@@ -585,6 +585,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get fairness report
+  app.get("/api/reports/fairness", async (_req: Request, res: Response) => {
+    try {
+      const teamMembers = await storage.getTeamMembers();
+      const fairnessData = [];
+      
+      for (const member of teamMembers) {
+        const assignmentCount = await storage.getMemberAssignmentCount(member.id);
+        fairnessData.push({
+          id: member.id,
+          name: member.name,
+          region: member.region,
+          assignmentCount,
+        });
+      }
+      
+      res.json(fairnessData);
+    } catch (error) {
+      console.error('Error generating fairness report:', error);
+      res.status(500).json({ message: "Failed to generate fairness report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
