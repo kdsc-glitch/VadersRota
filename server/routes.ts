@@ -341,22 +341,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             usMembers: selectedUSMember.name,
             ukMember: selectedUKMember.name
           });
-          
-          await storage.createRotaHistory({
-            assignmentId: dayAssignment.id,
-            memberId: selectedUSMember.id,
-            region: "us",
-            startDate: dateStr,
-            endDate: dateStr,
-          });
-          
-          await storage.createRotaHistory({
-            assignmentId: dayAssignment.id,
-            memberId: selectedUKMember.id,
-            region: "uk",
-            startDate: dateStr,
-            endDate: dateStr,
-          });
         }
         
         // Update assignment counts (once per week, not per day)
@@ -425,22 +409,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               date: dateStr,
               usMembers: dayUSMember.name,
               ukMember: dayUKMember.name
-            });
-            
-            await storage.createRotaHistory({
-              assignmentId: dayAssignment.id,
-              memberId: dayUSMember.id,
-              region: "us",
-              startDate: dateStr,
-              endDate: dateStr,
-            });
-            
-            await storage.createRotaHistory({
-              assignmentId: dayAssignment.id,
-              memberId: dayUKMember.id,
-              region: "uk",
-              startDate: dateStr,
-              endDate: dateStr,
             });
             
             // Update assignment counts for fair rotation tracking
