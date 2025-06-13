@@ -198,52 +198,33 @@ export class DatabaseStorage implements IStorage {
 
 
   async getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]> {
-    console.log(`\n=== getAvailableMembers DEBUG ===`);
-    console.log(`Region: ${region}, Period: ${startDate} to ${endDate}`);
-    
     const regionMembers = await this.getTeamMembersByRegion(region);
-    console.log(`Found ${regionMembers.length} total members in ${region}:`, regionMembers.map(m => `${m.name} (id: ${m.id})`));
     
     // Filter out members who have holidays during the assignment period
     const availableMembers: TeamMember[] = [];
     
     for (const member of regionMembers) {
-      console.log(`\nChecking member: ${member.name} (id: ${member.id})`);
-      
       const memberHolidays = await this.getHolidaysByMember(member.id);
-      console.log(`Found ${memberHolidays.length} holidays for ${member.name}:`, memberHolidays);
-      
       let hasConflict = false;
       
       const assignmentStart = new Date(startDate);
       const assignmentEnd = new Date(endDate);
-      console.log(`Assignment period: ${assignmentStart.toISOString()} to ${assignmentEnd.toISOString()}`);
       
       for (const holiday of memberHolidays) {
         const holidayStart = new Date(holiday.startDate);
         const holidayEnd = new Date(holiday.endDate);
-        console.log(`Holiday: ${holidayStart.toISOString()} to ${holidayEnd.toISOString()}`);
         
         // Check for date overlap
         if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
-          console.log(`CONFLICT DETECTED: Holiday overlaps with assignment period`);
           hasConflict = true;
           break;
-        } else {
-          console.log(`No conflict: Holiday doesn't overlap`);
         }
       }
       
       if (!hasConflict) {
-        console.log(`${member.name} is AVAILABLE`);
         availableMembers.push(member);
-      } else {
-        console.log(`${member.name} is NOT AVAILABLE due to holiday conflict`);
       }
     }
-    
-    console.log(`\nFinal result: ${availableMembers.length} available members:`, availableMembers.map(m => m.name));
-    console.log(`=== END DEBUG ===\n`);
     
     return availableMembers;
   }

@@ -260,25 +260,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Week contains ${weekdays.length} weekdays:`, weekdays);
       
-      // Helper function to check if member is available on a specific date
-      const isMemberAvailable = (member: any, dateStr: string): boolean => {
-        if (!member.isAvailable) return false;
-        
+      // Helper function to check if member is available on a specific date (async version)
+      const isMemberAvailableAsync = async (member: any, dateStr: string): Promise<boolean> => {
         const checkDate = new Date(dateStr);
+        const memberHolidays = await storage.getHolidaysByMember(member.id);
         
-        // Check unavailable period
-        if (member.unavailableStart && member.unavailableEnd) {
-          const unavailableStart = new Date(member.unavailableStart);
-          const unavailableEnd = new Date(member.unavailableEnd);
-          if (checkDate >= unavailableStart && checkDate <= unavailableEnd) {
-            return false;
-          }
-        }
-        
-        // Check holiday period
-        if (member.holidayStart && member.holidayEnd) {
-          const holidayStart = new Date(member.holidayStart);
-          const holidayEnd = new Date(member.holidayEnd);
+        // Check if any holiday conflicts with this date
+        for (const holiday of memberHolidays) {
+          const holidayStart = new Date(holiday.startDate);
+          const holidayEnd = new Date(holiday.endDate);
           if (checkDate >= holidayStart && checkDate <= holidayEnd) {
             return false;
           }
@@ -288,13 +278,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Check if member is available for ALL days in the week
-      const isMemberAvailableForFullWeek = (member: any): boolean => {
-        return weekdays.every(dateStr => isMemberAvailable(member, dateStr));
+      const isMemberAvailableForFullWeek = async (member: any): Promise<boolean> => {
+        for (const dateStr of weekdays) {
+          const isAvailable = await isMemberAvailableAsync(member, dateStr);
+          if (!isAvailable) return false;
+        }
+        return true;
       };
       
       // Try to find members who can cover the full week first
-      const fullWeekUSMembers = allUSMembers.filter(isMemberAvailableForFullWeek);
-      const fullWeekUKMembers = allUKMembers.filter(isMemberAvailableForFullWeek);
+      const fullWeekUSMembers = [];
+      const fullWeekUKMembers = [];
+      
+      for (const member of allUSMembers) {
+        if (await isMemberAvailableForFullWeek(member)) {
+          fullWeekUSMembers.push(member);
+        }
+      }
+      
+      for (const member of allUKMembers) {
+        if (await isMemberAvailableForFullWeek(member)) {
+          fullWeekUKMembers.push(member);
+        }
+      }
       
       let selectedUSMember = null;
       let selectedUKMember = null;
@@ -368,8 +374,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Processing weekday: ${dateStr}`);
           
           // Filter available members for this specific day
-          const dayUSMembers = allUSMembers.filter(member => isMemberAvailable(member, dateStr));
-          const dayUKMembers = allUKMembers.filter(member => isMemberAvailable(member, dateStr));
+          const dayUSMembers = [];
+          const dayUKMembers = [];
+          
+          for (const member of allUSMembers) {
+            if (await isMemberAvailableAsync(member, dateStr)) {
+              dayUSMembers.push(member);
+            }
+          }
+          
+          for (const member of allUKMembers) {
+            if (await isMemberAvailableAsync(member, dateStr)) {
+              dayUKMembers.push(member);
+            }
+          }
           
           console.log(`Found ${dayUSMembers.length} US members, ${dayUKMembers.length} UK members for ${dateStr}`);
           
@@ -453,17 +471,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const allUKMembers = await storage.getTeamMembersByRegion("uk");
         const conflictDetails = [];
         
+        // Check holiday conflicts for US members
         for (const member of allUSMembers) {
-          if (!member.isAvailable) {
-            conflictDetails.push(`${member.name} (US): Currently unavailable`);
-          } else if (member.holidayStart && member.holidayEnd) {
-            const holidayStart = new Date(member.holidayStart);
-            const holidayEnd = new Date(member.holidayEnd);
+          const memberHolidays = await storage.getHolidaysByMember(member.id);
+          for (const holiday of memberHolidays) {
+            const holidayStart = new Date(holiday.startDate);
+            const holidayEnd = new Date(holiday.endDate);
             const assignStart = new Date(assignmentStartDate);
             const assignEnd = new Date(assignmentEndDate);
             
             if (assignStart <= holidayEnd && assignEnd >= holidayStart) {
-              conflictDetails.push(`${member.name} (US): On holiday ${member.holidayStart} to ${member.holidayEnd}`);
+              conflictDetails.push(`${member.name} (US): On holiday ${holiday.startDate} to ${holiday.endDate}`);
             }
           }
         }
