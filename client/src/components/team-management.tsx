@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, FlagIcon, Edit, Wand2, CalendarX, TrendingUp, Loader2, Sparkles } from "lucide-react";
@@ -24,6 +24,11 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
   const [loadingStageTeam, setLoadingStageTeam] = useState<string>("");
+  
+  // Fetch holidays data to check current status
+  const { data: holidays = [] } = useQuery({
+    queryKey: ["/api/holidays"],
+  });
   
   const autoAssignMutation = useMutation({
     mutationFn: async () => {
@@ -104,14 +109,24 @@ export function TeamManagement({ teamMembers, onAddMember }: TeamManagementProps
   const ukMembers = teamMembers.filter(m => m.region === "uk");
 
   const getStatusBadge = (member: TeamMember) => {
-    if (!member.isAvailable) {
+    // Check if member is currently on holiday (today's date falls within any holiday period)
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Check if member has any holidays that include today
+    const isOnHolidayToday = holidays.some((holiday: any) => {
+      if (holiday.memberId !== member.id) return false;
+      return todayStr >= holiday.startDate && todayStr <= holiday.endDate;
+    });
+    
+    if (isOnHolidayToday) {
       return (
         <Badge variant="secondary" className="bg-amber-100 text-amber-800">
           Holiday
         </Badge>
       );
     }
-
+    
     return (
       <Badge variant="secondary" className="bg-green-100 text-green-800">
         Available
