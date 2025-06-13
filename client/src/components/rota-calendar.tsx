@@ -516,11 +516,21 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
           {/* Calendar Header */}
           <div className="grid grid-cols-6 gap-4 mb-4">
             <div className="text-sm font-medium text-slate-600">Week</div>
-            {weekDates.map((date, index) => (
-              <div key={index} className="text-sm font-medium text-slate-600 text-center">
-                {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </div>
-            ))}
+            {weekDates.map((date, index) => {
+              const todayIndicator = isToday(date);
+              return (
+                <div key={index} className={`text-sm font-medium text-center p-2 rounded-lg ${
+                  todayIndicator 
+                    ? "bg-blue-100 border-2 border-blue-500 text-blue-800 font-bold" 
+                    : "text-slate-600"
+                }`}>
+                  {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {todayIndicator && (
+                    <div className="text-xs text-blue-600 font-medium">Today</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* US Region Row */}
@@ -536,29 +546,41 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
               const conflict = holidayConflicts.get(dateStr);
               const hasUSConflict = conflict && conflict.hasConflict && conflict.conflictingMembers.some((m: any) => m.region === 'us');
               
-              // Debug logging for June 16th conflict
-              if (dateStr === '2025-06-16') {
-                console.log('June 16th - Conflict data:', conflict);
-                console.log('June 16th - Has US conflict:', hasUSConflict);
-                console.log('June 16th - US Member:', dayUSMember);
-                console.log('June 16th - Assignment for this date:', getDayAssignment(date));
-              }
+              // Check for holidays on this date
+              const dateHolidays = getDateHolidays(date);
+              const usHolidays = dateHolidays.filter(h => {
+                const member = teamMembers.find(m => m.id === h.memberId);
+                return member && member.region === 'us';
+              });
+              const hasHoliday = usHolidays.length > 0;
+              const todayIndicator = isToday(date);
               
               return (
                 <div 
                   key={index} 
-                  className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
-                    hasUSConflict
-                      ? "bg-red-50 border-red-200 hover:bg-red-100"
+                  className={`p-2 border rounded-lg text-center cursor-pointer transition-colors relative ${
+                    todayIndicator ? "ring-2 ring-blue-500 ring-offset-1" : ""
+                  } ${
+                    hasUSConflict || hasHoliday
+                      ? "bg-amber-50 border-amber-300 hover:bg-amber-100"
                       : isAssigned 
                         ? "bg-green-50 border-green-200 hover:bg-green-100" 
                         : "bg-slate-50 border-slate-200 hover:bg-slate-100"
                   }`}
                   onClick={() => handleDayClick(date)}
-                  title={hasUSConflict ? `Holiday conflict: ${conflict.conflictingMembers.filter((m: any) => m.region === 'us').map((m: any) => m.name).join(', ')}` : ''}
+                  title={
+                    hasHoliday 
+                      ? `Holiday: ${usHolidays.map(h => {
+                          const member = teamMembers.find(m => m.id === h.memberId);
+                          return member ? member.name : 'Unknown';
+                        }).join(', ')}`
+                      : hasUSConflict 
+                        ? `Holiday conflict: ${conflict.conflictingMembers.filter((m: any) => m.region === 'us').map((m: any) => m.name).join(', ')}`
+                        : ''
+                  }
                 >
                   <div className={`text-xs font-medium ${
-                    hasUSConflict ? "text-red-800" : isAssigned ? "text-green-800" : "text-slate-600"
+                    hasUSConflict || hasHoliday ? "text-amber-800" : isAssigned ? "text-green-800" : "text-slate-600"
                   }`}>
                     {dayUSMember 
                       ? getNameInitials(dayUSMember.name)
@@ -566,10 +588,13 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                     }
                   </div>
                   <div className={`text-xs ${
-                    hasUSConflict ? "text-red-600" : isAssigned ? "text-green-600" : "text-slate-500"
+                    hasUSConflict || hasHoliday ? "text-amber-600" : isAssigned ? "text-green-600" : "text-slate-500"
                   }`}>
-                    {hasUSConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
+                    {hasHoliday ? "Holiday!" : hasUSConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
                   </div>
+                  {hasHoliday && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full"></div>
+                  )}
                 </div>
               );
             })}
@@ -588,21 +613,41 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
               const conflict = holidayConflicts.get(dateStr);
               const hasUKConflict = conflict && conflict.conflictingMembers.some((m: any) => m.region === 'uk');
               
+              // Check for holidays on this date
+              const dateHolidays = getDateHolidays(date);
+              const ukHolidays = dateHolidays.filter(h => {
+                const member = teamMembers.find(m => m.id === h.memberId);
+                return member && member.region === 'uk';
+              });
+              const hasHoliday = ukHolidays.length > 0;
+              const todayIndicator = isToday(date);
+              
               return (
                 <div 
                   key={index} 
-                  className={`p-2 border rounded-lg text-center cursor-pointer transition-colors ${
-                    hasUKConflict
-                      ? "bg-red-50 border-red-200 hover:bg-red-100"
+                  className={`p-2 border rounded-lg text-center cursor-pointer transition-colors relative ${
+                    todayIndicator ? "ring-2 ring-blue-500 ring-offset-1" : ""
+                  } ${
+                    hasUKConflict || hasHoliday
+                      ? "bg-amber-50 border-amber-300 hover:bg-amber-100"
                       : isAssigned 
                         ? "bg-green-50 border-green-200 hover:bg-green-100" 
                         : "bg-slate-50 border-slate-200 hover:bg-slate-100"
                   }`}
                   onClick={() => handleDayClick(date)}
-                  title={hasUKConflict ? `Holiday conflict: ${conflict.conflictingMembers.filter((m: any) => m.region === 'uk').map((m: any) => m.name).join(', ')}` : ''}
+                  title={
+                    hasHoliday 
+                      ? `Holiday: ${ukHolidays.map(h => {
+                          const member = teamMembers.find(m => m.id === h.memberId);
+                          return member ? member.name : 'Unknown';
+                        }).join(', ')}`
+                      : hasUKConflict 
+                        ? `Holiday conflict: ${conflict.conflictingMembers.filter((m: any) => m.region === 'uk').map((m: any) => m.name).join(', ')}`
+                        : ''
+                  }
                 >
                   <div className={`text-xs font-medium ${
-                    hasUKConflict ? "text-red-800" : isAssigned ? "text-green-800" : "text-slate-600"
+                    hasUKConflict || hasHoliday ? "text-amber-800" : isAssigned ? "text-green-800" : "text-slate-600"
                   }`}>
                     {dayUKMember 
                       ? getNameInitials(dayUKMember.name)
@@ -610,10 +655,13 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                     }
                   </div>
                   <div className={`text-xs ${
-                    hasUKConflict ? "text-red-600" : isAssigned ? "text-green-600" : "text-slate-500"
+                    hasUKConflict || hasHoliday ? "text-amber-600" : isAssigned ? "text-green-600" : "text-slate-500"
                   }`}>
-                    {hasUKConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
+                    {hasHoliday ? "Holiday!" : hasUKConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
                   </div>
+                  {hasHoliday && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full"></div>
+                  )}
                 </div>
               );
             })}
