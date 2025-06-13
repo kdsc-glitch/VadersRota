@@ -7,7 +7,6 @@ export const teamMembers = pgTable("team_members", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   region: text("region").notNull(), // "us" or "uk"
-  role: text("role").notNull().default("developer"),
 });
 
 export const rotaAssignments = pgTable("rota_assignments", {

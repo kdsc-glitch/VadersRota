@@ -22,7 +22,11 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-const editMemberSchema = insertTeamMemberSchema;
+const editMemberSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  region: z.enum(["us", "uk"], { required_error: "Please select a region" }),
+});
 type EditMemberFormData = z.infer<typeof editMemberSchema>;
 
 interface HolidayPeriod {
@@ -52,7 +56,6 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
       name: "",
       email: "",
       region: "us",
-      role: "developer",
     },
   });
 
@@ -61,8 +64,7 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
       form.reset({
         name: member.name,
         email: member.email,
-        region: member.region,
-        role: member.role,
+        region: member.region as "us" | "uk",
       });
 
       // Load holiday periods from the holidays API
@@ -232,29 +234,6 @@ export function SimpleEditMemberModal({ isOpen, onClose, member }: SimpleEditMem
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="developer">Developer</SelectItem>
-                        <SelectItem value="senior_developer">Senior Developer</SelectItem>
-                        <SelectItem value="tech_lead">Tech Lead</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Holiday Periods Section */}
