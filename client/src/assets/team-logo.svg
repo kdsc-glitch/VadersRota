@@ -1,0 +1,66 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1D4ED8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1E293B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#475569;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main logo circle -->
+  <circle cx="30" cy="30" r="25" fill="url(#logoGradient)" stroke="#E2E8F0" stroke-width="2"/>
+  
+  <!-- Calendar grid icon -->
+  <rect x="20" y="22" width="20" height="16" rx="2" fill="white" opacity="0.9"/>
+  <rect x="20" y="22" width="20" height="4" rx="2" fill="white"/>
+  
+  <!-- Calendar dots representing team members -->
+  <circle cx="24" cy="28" r="1.5" fill="#3B82F6"/>
+  <circle cx="30" cy="28" r="1.5" fill="#10B981"/>
+  <circle cx="36" cy="28" r="1.5" fill="#F59E0B"/>
+  
+  <circle cx="24" cy="32" r="1.5" fill="#EF4444"/>
+  <circle cx="30" cy="32" r="1.5" fill="#8B5CF6"/>
+  <circle cx="36" cy="32" r="1.5" fill="#06B6D4"/>
+  
+  <!-- Team people icons -->
+  <g transform="translate(42, 18)">
+    <!-- Person 1 -->
+    <circle cx="3" cy="4" r="2" fill="#3B82F6" opacity="0.8"/>
+    <path d="M0 12 C0 8 1.5 7 3 7 C4.5 7 6 8 6 12" fill="#3B82F6" opacity="0.8"/>
+    
+    <!-- Person 2 -->
+    <circle cx="9" cy="4" r="2" fill="#10B981" opacity="0.8"/>
+    <path d="M6 12 C6 8 7.5 7 9 7 C10.5 7 12 8 12 12" fill="#10B981" opacity="0.8"/>
+    
+    <!-- Person 3 -->
+    <circle cx="15" cy="6" r="2" fill="#F59E0B" opacity="0.8"/>
+    <path d="M12 14 C12 10 13.5 9 15 9 C16.5 9 18 10 18 14" fill="#F59E0B" opacity="0.8"/>
+  </g>
+  
+  <!-- Support text -->
+  <text x="75" y="25" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" fill="url(#textGradient)">
+    Support Rota
+  </text>
+  
+  <!-- Tagline -->
+  <text x="75" y="40" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="500" fill="#64748B">
+    Smart Team Scheduling
+  </text>
+  
+  <!-- Fun rotating clock hands indicator -->
+  <g transform="translate(175, 30)">
+    <circle cx="0" cy="0" r="12" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+    <line x1="0" y1="0" x2="0" y2="-8" stroke="#3B82F6" stroke-width="2" stroke-linecap="round">
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0" to="360" dur="10s" repeatCount="indefinite"/>
+    </line>
+    <line x1="0" y1="0" x2="5" y2="0" stroke="#10B981" stroke-width="1.5" stroke-linecap="round">
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0" to="360" dur="60s" repeatCount="indefinite"/>
+    </line>
+    <circle cx="0" cy="0" r="1.5" fill="#1E293B"/>
+  </g>
+</svg>

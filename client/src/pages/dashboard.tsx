@@ -73,8 +73,40 @@ export default function Dashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Users className="text-white w-4 h-4" />
+                {/* Fun Team Logo */}
+                <div className="relative">
+                  <svg width="48" height="48" viewBox="0 0 48 48" className="drop-shadow-sm">
+                    <defs>
+                      <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{stopColor:'#3B82F6'}} />
+                        <stop offset="100%" style={{stopColor:'#1D4ED8'}} />
+                      </linearGradient>
+                    </defs>
+                    
+                    {/* Main circle */}
+                    <circle cx="24" cy="24" r="20" fill="url(#logoGrad)" stroke="#E2E8F0" strokeWidth="2"/>
+                    
+                    {/* Calendar */}
+                    <rect x="16" y="18" width="16" height="12" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="16" y="18" width="16" height="3" rx="2" fill="white"/>
+                    
+                    {/* Colorful dots for team members */}
+                    <circle cx="19" cy="23" r="1.2" fill="#3B82F6"/>
+                    <circle cx="24" cy="23" r="1.2" fill="#10B981"/>
+                    <circle cx="29" cy="23" r="1.2" fill="#F59E0B"/>
+                    <circle cx="19" cy="26" r="1.2" fill="#EF4444"/>
+                    <circle cx="24" cy="26" r="1.2" fill="#8B5CF6"/>
+                    <circle cx="29" cy="26" r="1.2" fill="#06B6D4"/>
+                    
+                    {/* Rotating clock hand for fun */}
+                    <g transform="translate(38, 10)">
+                      <circle cx="0" cy="0" r="6" fill="none" stroke="#E2E8F0" strokeWidth="1"/>
+                      <line x1="0" y1="0" x2="0" y2="-4" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round">
+                        <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="8s" repeatCount="indefinite"/>
+                      </line>
+                      <circle cx="0" cy="0" r="0.8" fill="#1E293B"/>
+                    </g>
+                  </svg>
                 </div>
                 <div>
                   <h1 className="text-xl font-semibold text-slate-900">Vaders Support Rota</h1>
