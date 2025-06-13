@@ -50,6 +50,11 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
     queryKey: ["/api/rota-assignments", refreshKey],
   });
 
+  // Fetch holidays for highlighting
+  const { data: holidays = [] } = useQuery<any[]>({
+    queryKey: ["/api/holidays"],
+  });
+
   // Load conflict data efficiently - only check assignments in current month view
   useEffect(() => {
     let isActive = true;
@@ -343,6 +348,23 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
 
   const getNameInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
+  };
+
+  // Check if a date has any holidays
+  const getDateHolidays = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return holidays.filter(holiday => {
+      const startDate = new Date(holiday.startDate);
+      const endDate = new Date(holiday.endDate);
+      const checkDate = new Date(dateStr);
+      return checkDate >= startDate && checkDate <= endDate;
+    });
+  };
+
+  // Check if today
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
   };
 
   const isWeekAssignmentActive = (date: Date) => {
