@@ -60,31 +60,10 @@ export function DayAssignModal({
     }
   }, [isOpen, selectedDate, existingAssignment, form]);
 
-  // Filter members based on availability for the specific selected date
-  const isAvailableOnDate = (member: any, date: string) => {
-    if (!member.isAvailable) return false;
-    
-    // Check if member is on holiday on this specific date
-    if (member.holidayStart && member.holidayEnd) {
-      const memberHolidayStart = new Date(member.holidayStart);
-      const memberHolidayEnd = new Date(member.holidayEnd);
-      const checkDate = new Date(date);
-      
-      // If the date falls within the holiday period, member is not available
-      if (checkDate >= memberHolidayStart && checkDate <= memberHolidayEnd) {
-        return false;
-      }
-    }
-    
-    return true;
-  };
-
-  const usMembers = teamMembers.filter(m => 
-    m.region === "us" && isAvailableOnDate(m, selectedDate || "")
-  );
-  const ukMembers = teamMembers.filter(m => 
-    m.region === "uk" && isAvailableOnDate(m, selectedDate || "")
-  );
+  // Simply filter by region - show all team members regardless of holidays
+  // Users can see holiday conflicts and make informed decisions
+  const usMembers = teamMembers.filter(m => m.region === "us");
+  const ukMembers = teamMembers.filter(m => m.region === "uk");
 
   const assignMutation = useMutation({
     mutationFn: async (data: DayAssignFormData) => {
