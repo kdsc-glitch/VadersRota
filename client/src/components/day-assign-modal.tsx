@@ -89,6 +89,7 @@ export function DayAssignModal({
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reports/fairness"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/fairness"] });
       
       toast({
         title: existingAssignment ? "Day Updated" : "Day Assigned",

@@ -230,8 +230,10 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       }
       
       setRefreshKey(prev => prev + 1);
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/fairness"] });
     },
     onError: (error: any) => {
       setLoadingStage("");
@@ -311,8 +313,10 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
       setRefreshKey(prev => prev + 1);
       
       // Also invalidate other related queries
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/fairness"] });
     },
     onError: (error) => {
       console.error('Clear week failed:', error);

@@ -52,6 +52,9 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
     mutationFn: (data: FormData) => apiRequest("POST", "/api/rota-assignments", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/fairness"] });
       toast({
         title: "Assignment Created",
         description: "Manual support assignment has been scheduled",

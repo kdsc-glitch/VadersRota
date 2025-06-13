@@ -107,6 +107,7 @@ export function QuickAssignModal({
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rota-assignments/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/fairness"] });
       
       // Handle assignment success - distinguish between full and partial
       if (data.assignments && data.skippedDays) {
