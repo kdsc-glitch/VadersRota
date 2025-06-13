@@ -2,17 +2,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertTeamMemberSchema } from "@shared/schema";
 import { z } from "zod";
 
-const formSchema = insertTeamMemberSchema.extend({
+const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   region: z.enum(["us", "uk"], { required_error: "Please select a region" }),
@@ -34,7 +32,6 @@ export function AddMemberModal({ isOpen, onClose }: AddMemberModalProps) {
       name: "",
       email: "",
       region: "us",
-      role: "developer",
     },
   });
 
@@ -121,46 +118,6 @@ export function AddMemberModal({ isOpen, onClose }: AddMemberModalProps) {
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="developer">Developer</SelectItem>
-                      <SelectItem value="senior_developer">Senior Developer</SelectItem>
-                      <SelectItem value="team_lead">Team Lead</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="isDsgMember"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Part of DSG main support rota</FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
             
             <div className="flex space-x-3 pt-4">
               <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
