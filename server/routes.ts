@@ -277,6 +277,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true;
       };
       
+      // Check if member was assigned for all 5 days in the previous week
+      const wasAssignedPreviousFullWeek = async (member: any): Promise<boolean> => {
+        // Calculate previous week's Monday and Friday
+        const currentWeekStart = new Date(assignmentStartDate);
+        const previousWeekStart = new Date(currentWeekStart);
+        previousWeekStart.setDate(currentWeekStart.getDate() - 7);
+        
+        const previousWeekEnd = new Date(previousWeekStart);
+        previousWeekEnd.setDate(previousWeekStart.getDate() + 4); // Friday
+        
+        const previousWeekStartStr = previousWeekStart.toISOString().split('T')[0];
+        const previousWeekEndStr = previousWeekEnd.toISOString().split('T')[0];
+        
+        // Get all assignments from previous week
+        const allAssignments = await storage.getRotaAssignments();
+        const previousWeekAssignments = allAssignments.filter(assignment => {
+          const assignStart = new Date(assignment.startDate);
+          const assignEnd = new Date(assignment.endDate);
+          return assignStart >= previousWeekStart && assignEnd <= previousWeekEnd &&
+                 (assignment.usMemberId === member.id || assignment.ukMemberId === member.id);
+        });
+        
+        // Check if they were assigned for all 5 weekdays
+        const assignedDays = new Set();
+        previousWeekAssignments.forEach(assignment => {
+          const assignDate = new Date(assignment.startDate);
+          const dayOfWeek = assignDate.getDay();
+          // Only count weekdays (Monday=1 to Friday=5)
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            assignedDays.add(assignment.startDate);
+          }
+        });
+        
+        return assignedDays.size === 5; // Was assigned all 5 weekdays
+      };
+
       // Check if member is available for ALL days in the week
       const isMemberAvailableForFullWeek = async (member: any): Promise<boolean> => {
         for (const dateStr of weekdays) {
@@ -291,20 +327,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fullWeekUKMembers = [];
       
       for (const member of allUSMembers) {
-        if (await isMemberAvailableForFullWeek(member)) {
+        const isAvailable = await isMemberAvailableForFullWeek(member);
+        const hadPreviousFullWeek = await wasAssignedPreviousFullWeek(member);
+        
+        if (isAvailable && !hadPreviousFullWeek) {
           fullWeekUSMembers.push(member);
+        } else if (hadPreviousFullWeek) {
+          console.log(`US member ${member.name} excluded - had full week assignment last week`);
         }
       }
       
       for (const member of allUKMembers) {
-        if (await isMemberAvailableForFullWeek(member)) {
+        const isAvailable = await isMemberAvailableForFullWeek(member);
+        const hadPreviousFullWeek = await wasAssignedPreviousFullWeek(member);
+        
+        if (isAvailable && !hadPreviousFullWeek) {
           fullWeekUKMembers.push(member);
+        } else if (hadPreviousFullWeek) {
+          console.log(`UK member ${member.name} excluded - had full week assignment last week`);
         }
       }
       
       let selectedUSMember = null;
       let selectedUKMember = null;
       
+      // If no members are available due to consecutive week restrictions, fall back to all available members
+      if (fullWeekUSMembers.length === 0 || fullWeekUKMembers.length === 0) {
+        console.log("No members available for full week due to consecutive week restrictions - using fallback");
+        
+        // Fall back to all members who are available (ignoring consecutive week rule)
+        for (const member of allUSMembers) {
+          if (await isMemberAvailableForFullWeek(member)) {
+            fullWeekUSMembers.push(member);
+          }
+        }
+        
+        for (const member of allUKMembers) {
+          if (await isMemberAvailableForFullWeek(member)) {
+            fullWeekUKMembers.push(member);
+          }
+        }
+        
+        if (fullWeekUSMembers.length > 0 && fullWeekUKMembers.length > 0) {
+          console.log(`Fallback: Found ${fullWeekUSMembers.length} US and ${fullWeekUKMembers.length} UK members available for full week`);
+        }
+      }
+
       if (fullWeekUSMembers.length > 0 && fullWeekUKMembers.length > 0) {
         console.log(`Found ${fullWeekUSMembers.length} US and ${fullWeekUKMembers.length} UK members available for full week`);
         
