@@ -135,9 +135,11 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Select US team member</option>
-                      <option value="3">Alex Kumar</option>
-                      <option value="2">Mike Rodriguez</option>
-                      <option value="1">Sarah Chen</option>
+                      {usMembers.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
                     </select>
                   </FormControl>
                   <FormMessage />
@@ -161,9 +163,11 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Select UK team member</option>
-                      <option value="4">James Wilson</option>
-                      <option value="5">Emma Knight</option>
-                      <option value="6">David Parker</option>
+                      {ukMembers.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
                     </select>
                   </FormControl>
                   <FormMessage />

@@ -197,6 +197,38 @@ export class DatabaseStorage implements IStorage {
 
 
 
+  async getAvailableMembers(region: string, startDate: string, endDate: string): Promise<TeamMember[]> {
+    const regionMembers = await this.getTeamMembersByRegion(region);
+    
+    // Filter out members who have holidays during the assignment period
+    const availableMembers: TeamMember[] = [];
+    
+    for (const member of regionMembers) {
+      const memberHolidays = await this.getHolidaysByMember(member.id);
+      let hasConflict = false;
+      
+      const assignmentStart = new Date(startDate);
+      const assignmentEnd = new Date(endDate);
+      
+      for (const holiday of memberHolidays) {
+        const holidayStart = new Date(holiday.startDate);
+        const holidayEnd = new Date(holiday.endDate);
+        
+        // Check for date overlap
+        if (assignmentStart <= holidayEnd && assignmentEnd >= holidayStart) {
+          hasConflict = true;
+          break;
+        }
+      }
+      
+      if (!hasConflict) {
+        availableMembers.push(member);
+      }
+    }
+    
+    return availableMembers;
+  }
+
   async getMemberAssignmentCount(memberId: number): Promise<number> {
     const history = await this.getRotaHistoryByMember(memberId);
     return history.length;
