@@ -185,7 +185,8 @@ export function ManualAssignModal({ isOpen, onClose, teamMembers }: ManualAssign
                     <Textarea 
                       placeholder="Add any notes about this assignment..." 
                       rows={3}
-                      {...field} 
+                      {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
