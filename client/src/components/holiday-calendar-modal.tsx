@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -318,40 +318,57 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
             </Button>
           </div>
 
-          {/* Calendar */}
+          {/* Simple Calendar Grid */}
           <Card>
             <CardContent className="p-6">
-              <Calendar
-                mode="single"
-                month={currentDate}
-                onMonthChange={setCurrentDate}
-                className="w-full"
-                modifiers={{
-                  holiday: (date) => getDateHolidays(date).length > 0,
-                }}
-                modifiersStyles={{
-                  holiday: {
-                    backgroundColor: '#fef3c7',
-                    color: '#92400e',
-                    fontWeight: 'bold',
-                  },
-                }}
-                components={{
-                  Day: ({ date, ...props }) => {
+              <div className="grid grid-cols-7 gap-2 text-center">
+                {/* Header */}
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div key={day} className="p-2 text-sm font-medium text-slate-600">
+                    {day}
+                  </div>
+                ))}
+                
+                {/* Calendar Days */}
+                {(() => {
+                  const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                  const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+                  const startDate = new Date(firstDay);
+                  startDate.setDate(startDate.getDate() - firstDay.getDay());
+                  
+                  const days = [];
+                  for (let i = 0; i < 42; i++) {
+                    const date = new Date(startDate);
+                    date.setDate(startDate.getDate() + i);
+                    
+                    const isCurrentMonth = date.getMonth() === currentDate.getMonth();
                     const dateHolidays = getDateHolidays(date);
                     const hasHolidays = dateHolidays.length > 0;
                     
-                    return (
-                      <div className="relative">
-                        <button {...props} />
+                    days.push(
+                      <div
+                        key={i}
+                        className={`p-2 text-sm relative border rounded ${
+                          isCurrentMonth 
+                            ? hasHolidays 
+                              ? 'bg-amber-100 border-amber-300 text-amber-900' 
+                              : 'bg-white border-slate-200 text-slate-900'
+                            : 'bg-slate-50 border-slate-100 text-slate-400'
+                        }`}
+                        title={hasHolidays ? dateHolidays.map(h => `${getMemberName(h.memberId)}: ${h.description || 'Holiday'}`).join(', ') : ''}
+                      >
+                        {date.getDate()}
                         {hasHolidays && (
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full"></div>
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full flex items-center justify-center">
+                            <span className="text-xs text-white font-bold">{dateHolidays.length}</span>
+                          </div>
                         )}
                       </div>
                     );
-                  },
-                }}
-              />
+                  }
+                  return days;
+                })()}
+              </div>
             </CardContent>
           </Card>
 
