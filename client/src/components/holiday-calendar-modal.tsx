@@ -5,28 +5,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { CalendarX, User, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarX, User, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { TeamMember } from "@shared/schema";
+import type { TeamMember, Holiday } from "@shared/schema";
 
 const holidaySchema = z.object({
   memberId: z.coerce.number().min(1, "Please select a team member"),
-  holidayStart: z.string().min(1, "Start date is required"),
-  holidayEnd: z.string().min(1, "End date is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  description: z.string().optional(),
 }).refine((data) => {
-  if (data.holidayStart && data.holidayEnd) {
-    return new Date(data.holidayStart) <= new Date(data.holidayEnd);
+  if (data.startDate && data.endDate) {
+    return new Date(data.startDate) <= new Date(data.endDate);
   }
   return true;
 }, {
   message: "End date must be after or equal to start date",
-  path: ["holidayEnd"],
+  path: ["endDate"],
 });
 
 type HolidayFormData = z.infer<typeof holidaySchema>;
@@ -43,156 +45,126 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
   
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({
     queryKey: ["/api/team-members"],
+    enabled: isOpen,
+  });
+
+  const { data: holidays = [] } = useQuery<Holiday[]>({
+    queryKey: ["/api/holidays"],
+    enabled: isOpen,
   });
 
   const form = useForm<HolidayFormData>({
     resolver: zodResolver(holidaySchema),
     defaultValues: {
       memberId: 0,
-      holidayStart: "",
-      holidayEnd: "",
+      startDate: "",
+      endDate: "",
+      description: "",
     },
   });
 
-  const updateHolidayMutation = useMutation({
+  const createHolidayMutation = useMutation({
     mutationFn: async (data: HolidayFormData) => {
-      console.log('Making API request with data:', data);
-      const payload = {
-        holidayStart: data.holidayStart,
-        holidayEnd: data.holidayEnd,
-        isAvailable: false,
-      };
-      console.log('API payload:', payload);
-      return apiRequest("PATCH", `/api/team-members/${data.memberId}`, payload);
+      const startDate = new Date(data.startDate);
+      const endDate = new Date(data.endDate);
+      
+      if (startDate > endDate) {
+        throw new Error("Start date must be before or equal to end date");
+      }
+
+      return apiRequest("POST", "/api/holidays", {
+        memberId: data.memberId,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        description: data.description || `Holiday ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`,
+      });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/holidays"] });
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
       toast({
-        title: "Holiday Updated",
-        description: "Team member holiday period has been set",
+        title: "Holiday Added",
+        description: "Holiday period has been successfully added",
       });
-      form.reset({
-        memberId: 0,
-        holidayStart: "",
-        holidayEnd: "",
-      });
+      form.reset();
       setShowAddForm(false);
     },
     onError: (error: any) => {
-      console.error('Holiday update mutation error:', error);
-      const errorMessage = error?.message || "Failed to update holiday period";
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error.message || "Failed to add holiday period",
         variant: "destructive",
       });
     },
   });
 
-  const clearHolidayMutation = useMutation({
-    mutationFn: async (memberId: number) => {
-      console.log('Clearing holiday for member:', memberId);
-      return apiRequest("PATCH", `/api/team-members/${memberId}`, {
-        holidayStart: null,
-        holidayEnd: null,
-        isAvailable: true,
-      });
+  const deleteHolidayMutation = useMutation({
+    mutationFn: async (holidayId: number) => {
+      return apiRequest("DELETE", `/api/holidays/${holidayId}`);
     },
     onSuccess: () => {
-      console.log('Holiday cleared successfully');
+      queryClient.invalidateQueries({ queryKey: ["/api/holidays"] });
       queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
       toast({
-        title: "Holiday Cleared",
-        description: "Team member is now available",
+        title: "Holiday Removed",
+        description: "Holiday period has been removed",
       });
     },
-    onError: (error: any) => {
-      console.error('Error clearing holiday:', error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to clear holiday period";
+    onError: () => {
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to remove holiday period",
         variant: "destructive",
       });
     },
   });
 
-  // Helper function to format date for HTML date input (YYYY-MM-DD)
-  const formatDateForInput = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   const onSubmit = (data: HolidayFormData) => {
-    console.log('=== HOLIDAY FORM SUBMISSION ===');
-    console.log('Submitting holiday data:', data);
-    console.log('Form errors:', form.formState.errors);
-    console.log('Form values:', form.getValues());
-    console.log('Form is valid:', form.formState.isValid);
-    console.log('Form is submitting:', form.formState.isSubmitting);
-    
-    // Validate data before mutation
-    const validation = holidaySchema.safeParse(data);
-    if (!validation.success) {
-      console.error('Validation failed:', validation.error);
-      return;
-    }
-    
-    updateHolidayMutation.mutate(data);
+    createHolidayMutation.mutate(data);
   };
 
-  // Calendar helper functions
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+
   const getMonthName = (date: Date) => {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
-  const getCalendarDays = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    
-    const firstDay = new Date(year, month, 1);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
-    
-    const days = [];
-    const current = new Date(startDate);
-    
-    // Generate 6 weeks (42 days) to cover all possible calendar layouts
-    for (let i = 0; i < 42; i++) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    
-    return days;
+  // Get member name by ID
+  const getMemberName = (memberId: number) => {
+    const member = teamMembers.find(m => m.id === memberId);
+    return member ? member.name : "Unknown Member";
   };
 
-  const isDateInHoliday = (date: Date, member: TeamMember) => {
-    if (!member.holidayStart || !member.holidayEnd) return false;
+  // Get holidays for the current month
+  const currentMonthHolidays = holidays.filter(holiday => {
+    const holidayStart = new Date(holiday.startDate);
+    const holidayEnd = new Date(holiday.endDate);
+    const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     
-    const holidayStart = new Date(member.holidayStart);
-    const holidayEnd = new Date(member.holidayEnd);
-    
-    return date >= holidayStart && date <= holidayEnd;
-  };
+    return (holidayStart <= monthEnd && holidayEnd >= monthStart);
+  });
 
-  const getMembersOnHolidayForDate = (date: Date) => {
-    return teamMembers.filter(member => isDateInHoliday(date, member));
+  // Check if a date has holidays
+  const getDateHolidays = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return holidays.filter(holiday => {
+      const startDate = new Date(holiday.startDate);
+      const endDate = new Date(holiday.endDate);
+      const checkDate = new Date(dateStr);
+      return checkDate >= startDate && checkDate <= endDate;
+    });
   };
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate);
-    if (direction === 'prev') {
-      newDate.setMonth(newDate.getMonth() - 1);
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1);
-    }
-    setCurrentDate(newDate);
-  };
-
-  const calendarDays = getCalendarDays(currentDate);
-  const membersOnHoliday = teamMembers.filter(m => !m.isAvailable && m.holidayStart && m.holidayEnd);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -216,6 +188,109 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* Add Holiday Form */}
+          {showAddForm && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-medium text-slate-900 mb-4">Add New Holiday Period</h3>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="memberId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Team Member</FormLabel>
+                          <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select team member" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {teamMembers.map((member) => (
+                                <SelectItem key={member.id} value={member.id.toString()}>
+                                  {member.name} ({member.region.toUpperCase()})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="startDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Start Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="endDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>End Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (Optional)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="e.g., Annual leave, Conference..."
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="flex space-x-3 pt-4">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="flex-1" 
+                        onClick={() => setShowAddForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        className="flex-1" 
+                        disabled={createHolidayMutation.isPending}
+                      >
+                        {createHolidayMutation.isPending ? "Adding..." : "Add Holiday"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Month Navigation */}
           <div className="flex items-center justify-between">
             <Button
@@ -243,62 +318,50 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
             </Button>
           </div>
 
-          {/* Calendar Grid */}
-          <div className="border rounded-lg overflow-hidden">
-            {/* Day Headers */}
-            <div className="grid grid-cols-7 bg-slate-50">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="p-2 text-center text-sm font-medium text-slate-600 border-r border-slate-200 last:border-r-0">
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            {/* Calendar Days */}
-            <div className="grid grid-cols-7">
-              {calendarDays.map((day, index) => {
-                const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-                const membersOnDay = getMembersOnHolidayForDate(day);
-                const isToday = day.toDateString() === new Date().toDateString();
-                
-                return (
-                  <div
-                    key={index}
-                    className={`min-h-20 p-2 border-r border-b border-slate-200 last:border-r-0 ${
-                      !isCurrentMonth ? 'bg-slate-50' : 'bg-white'
-                    } ${isToday ? 'bg-blue-50 border-blue-200' : ''}`}
-                  >
-                    <div className={`text-sm font-medium mb-1 ${
-                      !isCurrentMonth ? 'text-slate-400' : isToday ? 'text-blue-600' : 'text-slate-900'
-                    }`}>
-                      {day.getDate()}
-                    </div>
+          {/* Calendar */}
+          <Card>
+            <CardContent className="p-6">
+              <Calendar
+                mode="single"
+                month={currentDate}
+                onMonthChange={setCurrentDate}
+                className="w-full"
+                modifiers={{
+                  holiday: (date) => getDateHolidays(date).length > 0,
+                }}
+                modifiersStyles={{
+                  holiday: {
+                    backgroundColor: '#fef3c7',
+                    color: '#92400e',
+                    fontWeight: 'bold',
+                  },
+                }}
+                components={{
+                  Day: ({ date, ...props }) => {
+                    const dateHolidays = getDateHolidays(date);
+                    const hasHolidays = dateHolidays.length > 0;
                     
-                    {/* Holiday indicators for this day */}
-                    <div className="space-y-1">
-                      {membersOnDay.map((member) => (
-                        <div
-                          key={member.id}
-                          className="text-xs px-1 py-0.5 rounded bg-amber-100 text-amber-800 truncate"
-                          title={`${member.name} on holiday`}
-                        >
-                          {member.name.split(' ')[0]} ({member.region.toUpperCase()})
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                    return (
+                      <div className="relative">
+                        <button {...props} />
+                        {hasHolidays && (
+                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full"></div>
+                        )}
+                      </div>
+                    );
+                  },
+                }}
+              />
+            </CardContent>
+          </Card>
 
           {/* Holiday Legend */}
-          {membersOnHoliday.length > 0 && (
+          {currentMonthHolidays.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium text-slate-900 mb-3">Current Holiday Periods</h3>
+              <h3 className="text-sm font-medium text-slate-900 mb-3">Holiday Periods This Month</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {membersOnHoliday.map((member) => (
-                  <Card key={member.id} className="bg-amber-50 border-amber-200">
+                {currentMonthHolidays.map((holiday) => (
+                  <Card key={holiday.id} className="bg-amber-50 border-amber-200">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
@@ -306,20 +369,22 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
                             <User className="w-3 h-3 text-amber-600" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-slate-900">{member.name}</p>
+                            <p className="text-sm font-medium text-slate-900">{getMemberName(holiday.memberId)}</p>
                             <p className="text-xs text-slate-500">
-                              {new Date(member.holidayStart!).toLocaleDateString()} - {new Date(member.holidayEnd!).toLocaleDateString()}
+                              {new Date(holiday.startDate).toLocaleDateString()} - {new Date(holiday.endDate).toLocaleDateString()}
                             </p>
+                            {holiday.description && (
+                              <p className="text-xs text-slate-600 mt-1">{holiday.description}</p>
+                            )}
                           </div>
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => clearHolidayMutation.mutate(member.id)}
-                          disabled={clearHolidayMutation.isPending}
-                          className="text-xs"
+                          onClick={() => deleteHolidayMutation.mutate(holiday.id)}
+                          disabled={deleteHolidayMutation.isPending}
                         >
-                          Clear
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </CardContent>
@@ -328,119 +393,28 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
               </div>
             </div>
           )}
-          
-          {/* Add Holiday Button */}
-          {!showAddForm && (
-            <div className="text-center">
-              <Button
-                onClick={() => setShowAddForm(true)}
-                className="w-full"
-                variant="outline"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add New Holiday Period
-              </Button>
-            </div>
-          )}
-          
-          {/* Add Holiday Form - Collapsible */}
-          {showAddForm && (
-            <Card className="border-blue-200 bg-blue-50">
-              <CardContent className="p-4">
-                <h3 className="text-sm font-medium text-slate-900 mb-3">Set New Holiday Period</h3>
-                <Form {...form}>
-                  <form 
-                    onSubmit={(e) => {
-                      console.log('Form submit event triggered');
-                      e.preventDefault();
-                      form.handleSubmit(onSubmit)(e);
-                    }} 
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="memberId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Team Member</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(parseInt(value))}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select team member" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {teamMembers.map((member) => (
-                                <SelectItem key={member.id} value={member.id.toString()}>
-                                  {member.name} ({member.region.toUpperCase()})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="holidayStart"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Start Date</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="date" 
-                                {...field}
-                                min={formatDateForInput(new Date())}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="holidayEnd"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>End Date</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="date" 
-                                {...field}
-                                min={form.watch("holidayStart") || formatDateForInput(new Date())}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="flex space-x-2">
-                      <Button
-                        type="submit"
-                        disabled={updateHolidayMutation.isPending}
-                        className="flex-1"
-                      >
-                        {updateHolidayMutation.isPending ? "Setting Holiday..." : "Set Holiday Period"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowAddForm(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
+
+          {/* Empty State */}
+          {holidays.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <CalendarX className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No Holidays Scheduled</h3>
+                <p className="text-slate-500 mb-4">Start by adding holiday periods for your team members.</p>
+                <Button onClick={() => setShowAddForm(true)} className="flex items-center space-x-2">
+                  <Plus className="w-4 h-4" />
+                  <span>Add First Holiday</span>
+                </Button>
               </CardContent>
             </Card>
           )}
+
+          {/* Actions */}
+          <div className="flex justify-end pt-4 border-t border-slate-200">
+            <Button onClick={onClose} variant="outline">
+              Close
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

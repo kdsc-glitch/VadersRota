@@ -561,8 +561,8 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                   className={`p-2 border rounded-lg text-center cursor-pointer transition-colors relative ${
                     todayIndicator ? "ring-2 ring-blue-500 ring-offset-1" : ""
                   } ${
-                    hasUSConflict || hasHoliday
-                      ? "bg-amber-50 border-amber-300 hover:bg-amber-100"
+                    hasUSConflict
+                      ? "bg-red-50 border-red-300 hover:bg-red-100"
                       : isAssigned 
                         ? "bg-green-50 border-green-200 hover:bg-green-100" 
                         : "bg-slate-50 border-slate-200 hover:bg-slate-100"
@@ -580,7 +580,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                   }
                 >
                   <div className={`text-xs font-medium ${
-                    hasUSConflict || hasHoliday ? "text-amber-800" : isAssigned ? "text-green-800" : "text-slate-600"
+                    hasUSConflict ? "text-red-800" : isAssigned ? "text-green-800" : "text-slate-600"
                   }`}>
                     {dayUSMember 
                       ? getNameInitials(dayUSMember.name)
@@ -588,9 +588,9 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                     }
                   </div>
                   <div className={`text-xs ${
-                    hasUSConflict || hasHoliday ? "text-amber-600" : isAssigned ? "text-green-600" : "text-slate-500"
+                    hasUSConflict ? "text-red-600" : isAssigned ? "text-green-600" : "text-slate-500"
                   }`}>
-                    {hasHoliday ? "Holiday!" : hasUSConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
+                    {hasUSConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
                   </div>
                   {hasHoliday && (
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full"></div>
@@ -628,8 +628,8 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                   className={`p-2 border rounded-lg text-center cursor-pointer transition-colors relative ${
                     todayIndicator ? "ring-2 ring-blue-500 ring-offset-1" : ""
                   } ${
-                    hasUKConflict || hasHoliday
-                      ? "bg-amber-50 border-amber-300 hover:bg-amber-100"
+                    hasUKConflict
+                      ? "bg-red-50 border-red-300 hover:bg-red-100"
                       : isAssigned 
                         ? "bg-green-50 border-green-200 hover:bg-green-100" 
                         : "bg-slate-50 border-slate-200 hover:bg-slate-100"
@@ -647,7 +647,7 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                   }
                 >
                   <div className={`text-xs font-medium ${
-                    hasUKConflict || hasHoliday ? "text-amber-800" : isAssigned ? "text-green-800" : "text-slate-600"
+                    hasUKConflict ? "text-red-800" : isAssigned ? "text-green-800" : "text-slate-600"
                   }`}>
                     {dayUKMember 
                       ? getNameInitials(dayUKMember.name)
@@ -655,9 +655,9 @@ export function RotaCalendar({ teamMembers, currentAssignment, onManualAssign }:
                     }
                   </div>
                   <div className={`text-xs ${
-                    hasUKConflict || hasHoliday ? "text-amber-600" : isAssigned ? "text-green-600" : "text-slate-500"
+                    hasUKConflict ? "text-red-600" : isAssigned ? "text-green-600" : "text-slate-500"
                   }`}>
-                    {hasHoliday ? "Holiday!" : hasUKConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
+                    {hasUKConflict ? "Holiday!" : isAssigned ? "Assigned" : "Click to assign"}
                   </div>
                   {hasHoliday && (
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full"></div>
