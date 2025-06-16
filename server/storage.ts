@@ -52,8 +52,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTeamMember(member: InsertTeamMember): Promise<TeamMember> {
-    const [newMember] = await db.insert(teamMembers).values(member).returning();
-    return newMember;
+    try {
+      console.log('Storage: Creating team member with data:', member);
+      const [newMember] = await db.insert(teamMembers).values(member).returning();
+      console.log('Storage: Successfully created team member:', newMember);
+      return newMember;
+    } catch (error) {
+      console.error('Storage: Database error creating team member:', error);
+      console.error('Storage: Member data that failed:', member);
+      throw error;
+    }
   }
 
   async updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {

@@ -20,11 +20,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create team member
   app.post("/api/team-members", async (req, res) => {
     try {
+      console.log('POST /api/team-members - Request body:', req.body);
+      
+      // Validate required fields
+      const { name, email, region } = req.body;
+      if (!name || !email || !region) {
+        console.log('Missing required fields:', { name, email, region });
+        return res.status(400).json({ 
+          message: "Missing required fields", 
+          required: ["name", "email", "region"],
+          received: req.body 
+        });
+      }
+      
       const member = await storage.createTeamMember(req.body);
+      console.log('Successfully created team member:', member);
       res.status(201).json(member);
     } catch (error) {
       console.error('Error creating team member:', error);
-      res.status(500).json({ message: "Failed to create team member" });
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        requestBody: req.body
+      });
+      res.status(500).json({ 
+        message: "Failed to create team member", 
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   });
 
