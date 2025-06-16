@@ -8,13 +8,17 @@ interface DashboardStatsProps {
   currentUKMember: TeamMember | null | undefined;
   nextRotationDate: string;
   currentAssignment: RotaAssignment | undefined;
+  isUSMemberOnHoliday: boolean;
+  isUKMemberOnHoliday: boolean;
 }
 
 export function DashboardStats({ 
   currentUSMember, 
   currentUKMember, 
   nextRotationDate,
-  currentAssignment 
+  currentAssignment,
+  isUSMemberOnHoliday,
+  isUKMemberOnHoliday
 }: DashboardStatsProps) {
   const getEndDate = () => {
     if (!currentAssignment) return "";
@@ -49,10 +53,17 @@ export function DashboardStats({
             </div>
           </div>
           <div className="mt-4 flex items-center space-x-2">
-            <Badge variant="secondary" className="bg-green-100 text-green-800">
-              <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-              Active
-            </Badge>
+            {isUSMemberOnHoliday ? (
+              <Badge variant="secondary" className="bg-red-100 text-red-800">
+                <div className="w-2 h-2 bg-red-400 rounded-full mr-1"></div>
+                On Holiday
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                Active
+              </Badge>
+            )}
             <span className="text-xs text-slate-500">Until {getEndDate()}</span>
           </div>
         </CardContent>
@@ -72,10 +83,17 @@ export function DashboardStats({
             </div>
           </div>
           <div className="mt-4 flex items-center space-x-2">
-            <Badge variant="secondary" className="bg-green-100 text-green-800">
-              <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-              Active
-            </Badge>
+            {isUKMemberOnHoliday ? (
+              <Badge variant="secondary" className="bg-red-100 text-red-800">
+                <div className="w-2 h-2 bg-red-400 rounded-full mr-1"></div>
+                On Holiday
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                Active
+              </Badge>
+            )}
             <span className="text-xs text-slate-500">Until {getEndDate()}</span>
           </div>
         </CardContent>

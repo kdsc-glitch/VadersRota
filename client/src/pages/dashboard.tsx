@@ -45,6 +45,10 @@ export default function Dashboard() {
     queryKey: ["/api/rota-assignments/upcoming"],
   });
 
+  const { data: holidays = [] } = useQuery({
+    queryKey: ["/api/holidays"],
+  });
+
   const getCurrentUSMember = () => {
     if (!currentAssignment) return null;
     return teamMembers.find(m => m.id === currentAssignment.usMemberId);
@@ -53,6 +57,21 @@ export default function Dashboard() {
   const getCurrentUKMember = () => {
     if (!currentAssignment) return null;
     return teamMembers.find(m => m.id === currentAssignment.ukMemberId);
+  };
+
+  const isOnHolidayToday = (memberId: number) => {
+    if (!memberId || !holidays.length) return false;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    return holidays.some((holiday: any) => {
+      if (holiday.memberId !== memberId) return false;
+      
+      const startDate = holiday.startDate;
+      const endDate = holiday.endDate;
+      
+      return today >= startDate && today <= endDate;
+    });
   };
 
 
@@ -139,6 +158,8 @@ export default function Dashboard() {
           currentUKMember={getCurrentUKMember()}
           nextRotationDate={getNextRotationDate()}
           currentAssignment={currentAssignment}
+          isUSMemberOnHoliday={getCurrentUSMember() ? isOnHolidayToday(getCurrentUSMember()!.id) : false}
+          isUKMemberOnHoliday={getCurrentUKMember() ? isOnHolidayToday(getCurrentUKMember()!.id) : false}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
