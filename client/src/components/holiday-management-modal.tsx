@@ -119,6 +119,14 @@ export function HolidayManagementModal({ isOpen, onClose }: HolidayManagementMod
     return member ? member.name : "Unknown Member";
   };
 
+  // Format date without timezone offset issues
+  const formatDateDisplay = (dateString: string) => {
+    // Parse as local date to avoid timezone conversion
+    const [year, month, day] = dateString.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return date.toLocaleDateString();
+  };
+
   // Filter current and upcoming holidays
   const today = new Date();
   today.setHours(0, 0, 0, 0);
