@@ -126,24 +126,20 @@ export function HolidayManagementModal({ isOpen, onClose }: HolidayManagementMod
     return `${month}/${day}/${year}`;
   };
 
-  // Filter current and upcoming holidays
+  // Filter current and upcoming holidays using string comparison to avoid timezone issues
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
   
   const currentHolidays = holidays.filter(holiday => {
-    const startDate = new Date(holiday.startDate);
-    const endDate = new Date(holiday.endDate);
-    return startDate <= today && endDate >= today;
+    return holiday.startDate <= todayString && holiday.endDate >= todayString;
   });
 
   const upcomingHolidays = holidays.filter(holiday => {
-    const startDate = new Date(holiday.startDate);
-    return startDate > today;
+    return holiday.startDate > todayString;
   });
 
   const pastHolidays = holidays.filter(holiday => {
-    const endDate = new Date(holiday.endDate);
-    return endDate < today;
+    return holiday.endDate < todayString;
   });
 
   return (
