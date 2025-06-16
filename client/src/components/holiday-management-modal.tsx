@@ -121,10 +121,9 @@ export function HolidayManagementModal({ isOpen, onClose }: HolidayManagementMod
 
   // Format date without timezone offset issues
   const formatDateDisplay = (dateString: string) => {
-    // Parse as local date to avoid timezone conversion
+    // Simply reformat the YYYY-MM-DD string to a readable format
     const [year, month, day] = dateString.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    return date.toLocaleDateString();
+    return `${month}/${day}/${year}`;
   };
 
   // Filter current and upcoming holidays
@@ -291,7 +290,7 @@ export function HolidayManagementModal({ isOpen, onClose }: HolidayManagementMod
                           <div>
                             <p className="text-sm font-medium text-slate-900">{getMemberName(holiday.memberId)}</p>
                             <p className="text-xs text-slate-500">
-                              {new Date(holiday.startDate).toLocaleDateString()} - {new Date(holiday.endDate).toLocaleDateString()}
+                              {formatDateDisplay(holiday.startDate)} - {formatDateDisplay(holiday.endDate)}
                             </p>
                             {holiday.description && (
                               <p className="text-xs text-slate-600 mt-1">{holiday.description}</p>
@@ -333,7 +332,7 @@ export function HolidayManagementModal({ isOpen, onClose }: HolidayManagementMod
                           <div>
                             <p className="text-sm font-medium text-slate-900">{getMemberName(holiday.memberId)}</p>
                             <p className="text-xs text-slate-500">
-                              {new Date(holiday.startDate).toLocaleDateString()} - {new Date(holiday.endDate).toLocaleDateString()}
+                              {formatDateDisplay(holiday.startDate)} - {formatDateDisplay(holiday.endDate)}
                             </p>
                             {holiday.description && (
                               <p className="text-xs text-slate-600 mt-1">{holiday.description}</p>
