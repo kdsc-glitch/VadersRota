@@ -145,6 +145,20 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
     return member ? member.name : "Unknown Member";
   };
 
+  // Format date without timezone offset issues
+  const formatDateDisplay = (dateString: string) => {
+    const [year, month, day] = dateString.split('-');
+    return `${month}/${day}/${year}`;
+  };
+
+  // Convert Date object to YYYY-MM-DD string without timezone conversion
+  const formatDateToString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Get holidays for the current month
   const currentMonthHolidays = holidays.filter(holiday => {
     const holidayStart = new Date(holiday.startDate);
@@ -157,12 +171,9 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
 
   // Check if a date has holidays
   const getDateHolidays = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateToString(date);
     return holidays.filter(holiday => {
-      const startDate = new Date(holiday.startDate);
-      const endDate = new Date(holiday.endDate);
-      const checkDate = new Date(dateStr);
-      return checkDate >= startDate && checkDate <= endDate;
+      return dateStr >= holiday.startDate && dateStr <= holiday.endDate;
     });
   };
 
@@ -388,7 +399,7 @@ export function HolidayCalendarModal({ isOpen, onClose }: HolidayCalendarModalPr
                           <div>
                             <p className="text-sm font-medium text-slate-900">{getMemberName(holiday.memberId)}</p>
                             <p className="text-xs text-slate-500">
-                              {new Date(holiday.startDate).toLocaleDateString()} - {new Date(holiday.endDate).toLocaleDateString()}
+                              {formatDateDisplay(holiday.startDate)} - {formatDateDisplay(holiday.endDate)}
                             </p>
                             {holiday.description && (
                               <p className="text-xs text-slate-600 mt-1">{holiday.description}</p>
